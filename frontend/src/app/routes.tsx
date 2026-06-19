@@ -11,6 +11,7 @@ import Billing from "./pages/Billing";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Prioritization from "./pages/Prioritization";
+import Triage from "./pages/Triage";
 
 function NotFound() {
   return (
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Dashboard },
       { path: "patients", Component: Patients },
       { path: "appointments", Component: Appointments },
+      { path: "triage", Component: Triage },
       { path: "doctors", Component: Doctors },
       { path: "laboratory", Component: Laboratory },
       { path: "records", Component: MedicalRecords },

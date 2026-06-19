@@ -1,5 +1,13 @@
 const pool = require("../../config/db");
-const { getTrimmedString, getOptionalString, parsePagination, buildPaginatedResponse } = require("../../utils/validators");
+const {
+  getTrimmedString,
+  getOptionalString,
+  isValidDateTime,
+  parsePagination,
+  buildPaginatedResponse,
+} = require("../../utils/validators");
+
+const ALLOWED_SEX = new Set(["femenino", "masculino", "otro", "no_indicado"]);
 
 function sanitize(body) {
   return {
@@ -7,12 +15,24 @@ function sanitize(body) {
     dni: getTrimmedString(body.dni),
     telefono: getOptionalString(body.telefono),
     email: getOptionalString(body.email),
+    fecha_nacimiento: getOptionalString(body.fecha_nacimiento),
+    sexo: getOptionalString(body.sexo),
+    residencia: getOptionalString(body.residencia),
+    contacto_emergencia: getOptionalString(body.contacto_emergencia),
   };
 }
 
 function validate(paciente, res) {
   if (!paciente.nombre || !paciente.dni) {
     res.status(400).json({ message: "Nombre y DNI son obligatorios." });
+    return false;
+  }
+  if (paciente.fecha_nacimiento && !isValidDateTime(paciente.fecha_nacimiento)) {
+    res.status(400).json({ message: "La fecha de nacimiento no es valida." });
+    return false;
+  }
+  if (paciente.sexo && !ALLOWED_SEX.has(paciente.sexo)) {
+    res.status(400).json({ message: "El sexo registrado no es valido." });
     return false;
   }
   return true;
@@ -27,7 +47,9 @@ async function getAll(query) {
   if (search) {
     params.push(`%${search}%`);
     where = `WHERE nombre ILIKE $1 OR dni ILIKE $1
-             OR COALESCE(telefono,'') ILIKE $1 OR COALESCE(email,'') ILIKE $1`;
+             OR COALESCE(telefono,'') ILIKE $1 OR COALESCE(email,'') ILIKE $1
+             OR COALESCE(residencia,'') ILIKE $1
+             OR COALESCE(contacto_emergencia,'') ILIKE $1`;
   }
 
   const [dataResult, countResult] = await Promise.all([
@@ -49,8 +71,21 @@ async function getById(id) {
 async function create(body) {
   const p = sanitize(body);
   const result = await pool.query(
-    "INSERT INTO pacientes (nombre, dni, telefono, email, fecha_registro) VALUES ($1,$2,$3,$4,NOW()) RETURNING *",
-    [p.nombre, p.dni, p.telefono, p.email]
+    `INSERT INTO pacientes (
+       nombre, dni, telefono, email, fecha_nacimiento, sexo,
+       residencia, contacto_emergencia, fecha_registro
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *`,
+    [
+      p.nombre,
+      p.dni,
+      p.telefono,
+      p.email,
+      p.fecha_nacimiento,
+      p.sexo,
+      p.residencia,
+      p.contacto_emergencia,
+    ]
   );
   return result.rows[0];
 }
@@ -58,8 +93,28 @@ async function create(body) {
 async function update(id, body) {
   const p = sanitize(body);
   const result = await pool.query(
-    "UPDATE pacientes SET nombre=$1, dni=$2, telefono=$3, email=$4 WHERE id_paciente=$5 RETURNING *",
-    [p.nombre, p.dni, p.telefono, p.email, id]
+    `UPDATE pacientes
+     SET nombre=$1,
+         dni=$2,
+         telefono=$3,
+         email=$4,
+         fecha_nacimiento=$5,
+         sexo=$6,
+         residencia=$7,
+         contacto_emergencia=$8
+     WHERE id_paciente=$9
+     RETURNING *`,
+    [
+      p.nombre,
+      p.dni,
+      p.telefono,
+      p.email,
+      p.fecha_nacimiento,
+      p.sexo,
+      p.residencia,
+      p.contacto_emergencia,
+      id,
+    ]
   );
   return result.rows[0] || null;
 }

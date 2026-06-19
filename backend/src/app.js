@@ -20,6 +20,7 @@ const prescripcionesRoutes = require("./modules/prescripciones/prescripciones.ro
 const cargosRoutes = require("./modules/cargos/cargos.routes");
 const pagosRoutes = require("./modules/pagos/pagos.routes");
 const analisisRoutes = require("./modules/analisis/analisis.routes");
+const triajesRoutes = require("./modules/triajes/triajes.routes");
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.get("/", (req, res) => {
       "/api/pagos",
       "/api/analisis/priorizacion",
       "/api/analisis/indicadores",
+      "/api/triajes",
     ],
   });
 });
@@ -78,6 +80,7 @@ app.use("/api/prescripciones", prescripcionesRoutes);
 app.use("/api/cargos", cargosRoutes);
 app.use("/api/pagos", pagosRoutes);
 app.use("/api/analisis", analisisRoutes);
+app.use("/api/triajes", triajesRoutes);
 app.use("/api/auth", authRoutes);
 // 404
 app.use((req, res) => {

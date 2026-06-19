@@ -7,14 +7,47 @@ const { VISITA_SELECT } = require("../../utils/queries");
 const { upsertChargeForRecord } = require("../../utils/cargosService");
 
 function sanitize(body) {
+  const optionalInteger = (value) => {
+    if (value === undefined || value === null || value === "") return null;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) ? parsed : null;
+  };
+  const optionalDecimal = (value) => {
+    if (value === undefined || value === null || value === "") return null;
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   return {
     id_cita: getOptionalId(body.id_cita),
     id_paciente: getOptionalId(body.id_paciente),
     id_medico: getOptionalId(body.id_medico),
     fecha_visita: getTrimmedString(body.fecha_visita),
     motivo: getTrimmedString(body.motivo),
+    historia_enfermedad_actual: getOptionalString(body.historia_enfermedad_actual),
+    antecedentes_medicos: getOptionalString(body.antecedentes_medicos),
+    antecedentes_quirurgicos: getOptionalString(body.antecedentes_quirurgicos),
+    antecedentes_alergicos: getOptionalString(body.antecedentes_alergicos),
+    antecedentes_traumaticos: getOptionalString(body.antecedentes_traumaticos),
+    antecedentes_ginecologicos: getOptionalString(body.antecedentes_ginecologicos),
+    examen_fisico: getOptionalString(body.examen_fisico),
+    presion_arterial: getOptionalString(body.presion_arterial),
+    frecuencia_cardiaca: optionalInteger(body.frecuencia_cardiaca),
+    frecuencia_respiratoria: optionalInteger(body.frecuencia_respiratoria),
+    temperatura: optionalDecimal(body.temperatura),
+    saturacion_oxigeno: optionalInteger(body.saturacion_oxigeno),
+    impresion_clinica: getOptionalString(body.impresion_clinica),
     diagnostico: getTrimmedString(body.diagnostico),
     tratamiento: getOptionalString(body.tratamiento),
+    conducta: getOptionalString(body.conducta),
+    tipo_atencion: getOptionalString(body.tipo_atencion),
+    dieta: getOptionalString(body.dieta),
+    soluciones: getOptionalString(body.soluciones),
+    ultrasonido: getOptionalString(body.ultrasonido),
+    rayos_x: getOptionalString(body.rayos_x),
+    ordenes_especiales: getOptionalString(body.ordenes_especiales),
+    diagnostico_egreso: getOptionalString(body.diagnostico_egreso),
+    fecha_egreso: getOptionalString(body.fecha_egreso),
     observaciones: getOptionalString(body.observaciones),
     costo_consulta: parseMoney(body.costo_consulta),
   };
@@ -31,6 +64,14 @@ function validate(v, res) {
   }
   if (!isValidDateTime(v.fecha_visita)) {
     res.status(400).json({ message: "La fecha de visita no tiene un formato valido." });
+    return false;
+  }
+  if (v.fecha_egreso && !isValidDateTime(v.fecha_egreso)) {
+    res.status(400).json({ message: "La fecha de egreso no tiene un formato valido." });
+    return false;
+  }
+  if (v.saturacion_oxigeno !== null && (v.saturacion_oxigeno < 0 || v.saturacion_oxigeno > 100)) {
+    res.status(400).json({ message: "La saturacion de oxigeno debe estar entre 0 y 100." });
     return false;
   }
   if (v.costo_consulta === null) {
@@ -116,10 +157,33 @@ async function create(body) {
     await client.query("BEGIN");
 
     const result = await client.query(
-      `INSERT INTO visitas_medicas (id_cita,id_paciente,id_medico,fecha_visita,motivo,diagnostico,tratamiento,observaciones,costo_consulta,created_at,updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW()) RETURNING id_visita`,
-      [visita.id_cita, visita.id_paciente, visita.id_medico, visita.fecha_visita,
-       visita.motivo, visita.diagnostico, visita.tratamiento, visita.observaciones, visita.costo_consulta]
+      `INSERT INTO visitas_medicas (
+         id_cita,id_paciente,id_medico,fecha_visita,motivo,
+         historia_enfermedad_actual,antecedentes_medicos,antecedentes_quirurgicos,
+         antecedentes_alergicos,antecedentes_traumaticos,antecedentes_ginecologicos,
+         examen_fisico,presion_arterial,frecuencia_cardiaca,frecuencia_respiratoria,
+         temperatura,saturacion_oxigeno,impresion_clinica,diagnostico,tratamiento,
+         conducta,tipo_atencion,dieta,soluciones,ultrasonido,rayos_x,
+         ordenes_especiales,diagnostico_egreso,fecha_egreso,observaciones,
+         costo_consulta,created_at,updated_at
+       )
+       VALUES (
+         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+         $18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,NOW(),NOW()
+       ) RETURNING id_visita`,
+      [
+        visita.id_cita, visita.id_paciente, visita.id_medico, visita.fecha_visita,
+        visita.motivo, visita.historia_enfermedad_actual, visita.antecedentes_medicos,
+        visita.antecedentes_quirurgicos, visita.antecedentes_alergicos,
+        visita.antecedentes_traumaticos, visita.antecedentes_ginecologicos,
+        visita.examen_fisico, visita.presion_arterial, visita.frecuencia_cardiaca,
+        visita.frecuencia_respiratoria, visita.temperatura, visita.saturacion_oxigeno,
+        visita.impresion_clinica, visita.diagnostico, visita.tratamiento,
+        visita.conducta, visita.tipo_atencion, visita.dieta, visita.soluciones,
+        visita.ultrasonido, visita.rayos_x, visita.ordenes_especiales,
+        visita.diagnostico_egreso, visita.fecha_egreso, visita.observaciones,
+        visita.costo_consulta,
+      ]
     );
     const idVisita = result.rows[0].id_visita;
 
@@ -168,9 +232,31 @@ async function update(id, body) {
 
     await client.query("BEGIN");
     await client.query(
-      `UPDATE visitas_medicas SET id_cita=$1,id_paciente=$2,id_medico=$3,fecha_visita=$4,motivo=$5,diagnostico=$6,tratamiento=$7,observaciones=$8,costo_consulta=$9,updated_at=NOW() WHERE id_visita=$10`,
-      [visita.id_cita, visita.id_paciente, visita.id_medico, visita.fecha_visita,
-       visita.motivo, visita.diagnostico, visita.tratamiento, visita.observaciones, visita.costo_consulta, id]
+      `UPDATE visitas_medicas SET
+         id_cita=$1,id_paciente=$2,id_medico=$3,fecha_visita=$4,motivo=$5,
+         historia_enfermedad_actual=$6,antecedentes_medicos=$7,
+         antecedentes_quirurgicos=$8,antecedentes_alergicos=$9,
+         antecedentes_traumaticos=$10,antecedentes_ginecologicos=$11,
+         examen_fisico=$12,presion_arterial=$13,frecuencia_cardiaca=$14,
+         frecuencia_respiratoria=$15,temperatura=$16,saturacion_oxigeno=$17,
+         impresion_clinica=$18,diagnostico=$19,tratamiento=$20,conducta=$21,
+         tipo_atencion=$22,dieta=$23,soluciones=$24,ultrasonido=$25,
+         rayos_x=$26,ordenes_especiales=$27,diagnostico_egreso=$28,
+         fecha_egreso=$29,observaciones=$30,costo_consulta=$31,updated_at=NOW()
+       WHERE id_visita=$32`,
+      [
+        visita.id_cita, visita.id_paciente, visita.id_medico, visita.fecha_visita,
+        visita.motivo, visita.historia_enfermedad_actual, visita.antecedentes_medicos,
+        visita.antecedentes_quirurgicos, visita.antecedentes_alergicos,
+        visita.antecedentes_traumaticos, visita.antecedentes_ginecologicos,
+        visita.examen_fisico, visita.presion_arterial, visita.frecuencia_cardiaca,
+        visita.frecuencia_respiratoria, visita.temperatura, visita.saturacion_oxigeno,
+        visita.impresion_clinica, visita.diagnostico, visita.tratamiento,
+        visita.conducta, visita.tipo_atencion, visita.dieta, visita.soluciones,
+        visita.ultrasonido, visita.rayos_x, visita.ordenes_especiales,
+        visita.diagnostico_egreso, visita.fecha_egreso, visita.observaciones,
+        visita.costo_consulta, id,
+      ]
     );
 
     if (visita.id_cita) {

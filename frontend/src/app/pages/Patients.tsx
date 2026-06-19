@@ -16,6 +16,7 @@ import {
   IdCard,
   Loader2,
   Mail,
+  MapPin,
   MoreVertical,
   Phone,
   Plus,
@@ -23,6 +24,7 @@ import {
   Search,
   Trash2,
   TriangleAlert,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -32,6 +34,10 @@ interface PatientFormState {
   dni: string;
   telefono: string;
   email: string;
+  fecha_nacimiento: string;
+  sexo: "femenino" | "masculino" | "otro" | "no_indicado";
+  residencia: string;
+  contacto_emergencia: string;
 }
 
 type PatientFormModalState =
@@ -81,6 +87,10 @@ function buildFormState(patient: PatientRecord | null): PatientFormState {
       dni: "",
       telefono: "",
       email: "",
+      fecha_nacimiento: "",
+      sexo: "no_indicado",
+      residencia: "",
+      contacto_emergencia: "",
     };
   }
 
@@ -89,6 +99,10 @@ function buildFormState(patient: PatientRecord | null): PatientFormState {
     dni: patient.dni,
     telefono: patient.telefono || "",
     email: patient.email || "",
+    fecha_nacimiento: patient.fecha_nacimiento?.slice(0, 10) || "",
+    sexo: patient.sexo || "no_indicado",
+    residencia: patient.residencia || "",
+    contacto_emergencia: patient.contacto_emergencia || "",
   };
 }
 
@@ -98,7 +112,22 @@ function toPayload(form: PatientFormState): PatientPayload {
     dni: form.dni.trim(),
     telefono: form.telefono.trim() || null,
     email: form.email.trim() || null,
+    fecha_nacimiento: form.fecha_nacimiento || null,
+    sexo: form.sexo,
+    residencia: form.residencia.trim() || null,
+    contacto_emergencia: form.contacto_emergencia.trim() || null,
   };
+}
+
+function getAge(birthDate: string | null | undefined) {
+  if (!birthDate) return "No registrada";
+  const birth = new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return "No registrada";
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDifference = today.getMonth() - birth.getMonth();
+  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birth.getDate())) age -= 1;
+  return `${age} años`;
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -175,6 +204,26 @@ function PatientModal({ patient, onClose }: { patient: PatientRecord; onClose: (
               label="Email"
               value={patient.email || "No registrado"}
             />
+            <InfoItem
+              icon={<CalendarDays className="w-4 h-4 text-gray-400" />}
+              label="Edad"
+              value={getAge(patient.fecha_nacimiento)}
+            />
+            <InfoItem
+              icon={<UserRound className="w-4 h-4 text-gray-400" />}
+              label="Sexo"
+              value={(patient.sexo || "No indicado").replace("_", " ")}
+            />
+            <InfoItem
+              icon={<MapPin className="w-4 h-4 text-gray-400" />}
+              label="Residencia"
+              value={patient.residencia || "No registrada"}
+            />
+            <InfoItem
+              icon={<Phone className="w-4 h-4 text-gray-400" />}
+              label="Contacto de emergencia"
+              value={patient.contacto_emergencia || "No registrado"}
+            />
           </div>
         </div>
       </div>
@@ -210,7 +259,7 @@ function PatientFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <h2 className="text-gray-900">{mode === "create" ? "Nuevo Paciente" : "Editar Paciente"}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">
@@ -270,8 +319,60 @@ function PatientFormModal({
             />
           </div>
 
-          <div className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
-            Este formulario se guarda directamente en la API del backend (`/api/pacientes`).
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-sm text-gray-700">Fecha de nacimiento</label>
+              <input
+                type="date"
+                value={form.fecha_nacimiento}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, fecha_nacimiento: event.target.value }))
+                }
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-700">Sexo</label>
+              <select
+                value={form.sexo}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    sexo: event.target.value as PatientFormState["sexo"],
+                  }))
+                }
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                <option value="no_indicado">No indicado</option>
+                <option value="femenino">Femenino</option>
+                <option value="masculino">Masculino</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700">Residencia o direccion</label>
+            <input
+              value={form.residencia}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, residencia: event.target.value }))
+              }
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              placeholder="Municipio, aldea, canton o direccion"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700">Contacto de emergencia</label>
+            <input
+              value={form.contacto_emergencia}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, contacto_emergencia: event.target.value }))
+              }
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              placeholder="Nombre, parentesco y telefono"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
@@ -388,7 +489,14 @@ export default function Patients() {
       return true;
     }
 
-    return [patient.nombre, patient.dni, patient.telefono || "", patient.email || ""].some((value) =>
+    return [
+      patient.nombre,
+      patient.dni,
+      patient.telefono || "",
+      patient.email || "",
+      patient.residencia || "",
+      patient.contacto_emergencia || "",
+    ].some((value) =>
       value.toLowerCase().includes(normalizedSearch)
     );
   });

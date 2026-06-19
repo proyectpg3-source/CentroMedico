@@ -6,6 +6,10 @@ export interface PatientRecord {
   dni: string;
   telefono: string | null;
   email: string | null;
+  fecha_nacimiento: string | null;
+  sexo: "femenino" | "masculino" | "otro" | "no_indicado" | null;
+  residencia: string | null;
+  contacto_emergencia: string | null;
   fecha_registro: string;
 }
 
@@ -14,6 +18,10 @@ export interface PatientPayload {
   dni: string;
   telefono?: string | null;
   email?: string | null;
+  fecha_nacimiento?: string | null;
+  sexo?: "femenino" | "masculino" | "otro" | "no_indicado" | null;
+  residencia?: string | null;
+  contacto_emergencia?: string | null;
 }
 
 export async function fetchPatients(signal?: AbortSignal) {

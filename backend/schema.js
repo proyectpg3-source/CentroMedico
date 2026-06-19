@@ -6,12 +6,32 @@ const SCHEMA_STATEMENTS = [
       dni TEXT NOT NULL,
       telefono TEXT,
       email TEXT,
+      fecha_nacimiento DATE,
+      sexo TEXT,
+      residencia TEXT,
+      contacto_emergencia TEXT,
       fecha_registro TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `,
   `
     ALTER TABLE pacientes
       ADD COLUMN IF NOT EXISTS fecha_registro TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  `,
+  `
+    ALTER TABLE pacientes
+      ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE;
+  `,
+  `
+    ALTER TABLE pacientes
+      ADD COLUMN IF NOT EXISTS sexo TEXT;
+  `,
+  `
+    ALTER TABLE pacientes
+      ADD COLUMN IF NOT EXISTS residencia TEXT;
+  `,
+  `
+    ALTER TABLE pacientes
+      ADD COLUMN IF NOT EXISTS contacto_emergencia TEXT;
   `,
   `
     CREATE UNIQUE INDEX IF NOT EXISTS pacientes_dni_key ON pacientes(dni);
@@ -83,6 +103,38 @@ const SCHEMA_STATEMENTS = [
     ON citas(estado, puntaje_prioridad DESC, fecha_hora ASC);
   `,
   `
+    CREATE TABLE IF NOT EXISTS triajes (
+      id_triaje SERIAL PRIMARY KEY,
+      id_cita INTEGER NOT NULL UNIQUE REFERENCES citas(id_cita) ON DELETE CASCADE,
+      id_paciente INTEGER NOT NULL REFERENCES pacientes(id_paciente) ON DELETE RESTRICT,
+      fecha_triaje TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      motivo_consulta TEXT NOT NULL,
+      historia_enfermedad_actual TEXT,
+      antecedentes_relevantes TEXT,
+      alergias_referidas TEXT,
+      presion_arterial TEXT,
+      frecuencia_cardiaca INTEGER,
+      frecuencia_respiratoria INTEGER,
+      temperatura NUMERIC(4,1),
+      saturacion_oxigeno INTEGER,
+      peso NUMERIC(6,2),
+      observaciones TEXT,
+      prioridad_clinica TEXT NOT NULL DEFAULT 'baja',
+      puntaje_prioridad INTEGER NOT NULL DEFAULT 10,
+      motivos_prioridad TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS idx_triajes_paciente
+    ON triajes(id_paciente, fecha_triaje DESC);
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS idx_triajes_prioridad
+    ON triajes(prioridad_clinica, puntaje_prioridad DESC);
+  `,
+  `
     CREATE TABLE IF NOT EXISTS visitas_medicas (
       id_visita SERIAL PRIMARY KEY,
       id_cita INTEGER UNIQUE REFERENCES citas(id_cita) ON DELETE SET NULL,
@@ -90,13 +142,101 @@ const SCHEMA_STATEMENTS = [
       id_medico INTEGER NOT NULL REFERENCES medicos(id_medico) ON DELETE RESTRICT,
       fecha_visita TIMESTAMPTZ NOT NULL,
       motivo TEXT NOT NULL,
+      historia_enfermedad_actual TEXT,
+      antecedentes_medicos TEXT,
+      antecedentes_quirurgicos TEXT,
+      antecedentes_alergicos TEXT,
+      antecedentes_traumaticos TEXT,
+      antecedentes_ginecologicos TEXT,
+      examen_fisico TEXT,
+      presion_arterial TEXT,
+      frecuencia_cardiaca INTEGER,
+      frecuencia_respiratoria INTEGER,
+      temperatura NUMERIC(4,1),
+      saturacion_oxigeno INTEGER,
+      impresion_clinica TEXT,
       diagnostico TEXT NOT NULL,
       tratamiento TEXT,
+      conducta TEXT,
+      tipo_atencion TEXT,
+      dieta TEXT,
+      soluciones TEXT,
+      ultrasonido TEXT,
+      rayos_x TEXT,
+      ordenes_especiales TEXT,
+      diagnostico_egreso TEXT,
+      fecha_egreso TIMESTAMPTZ,
       observaciones TEXT,
       costo_consulta NUMERIC(10,2) NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS historia_enfermedad_actual TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS antecedentes_medicos TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS antecedentes_quirurgicos TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS antecedentes_alergicos TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS antecedentes_traumaticos TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS antecedentes_ginecologicos TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS examen_fisico TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS presion_arterial TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS frecuencia_cardiaca INTEGER;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS frecuencia_respiratoria INTEGER;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS temperatura NUMERIC(4,1);
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS saturacion_oxigeno INTEGER;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS impresion_clinica TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS conducta TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS tipo_atencion TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS dieta TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS soluciones TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS ultrasonido TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS rayos_x TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS ordenes_especiales TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS diagnostico_egreso TEXT;
+  `,
+  `
+    ALTER TABLE visitas_medicas ADD COLUMN IF NOT EXISTS fecha_egreso TIMESTAMPTZ;
   `,
   `
     CREATE INDEX IF NOT EXISTS idx_visitas_paciente ON visitas_medicas(id_paciente);

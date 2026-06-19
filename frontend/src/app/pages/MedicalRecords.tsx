@@ -34,8 +34,30 @@ interface VisitFormState {
   date: string;
   time: string;
   motivo: string;
+  historia_enfermedad_actual: string;
+  antecedentes_medicos: string;
+  antecedentes_quirurgicos: string;
+  antecedentes_alergicos: string;
+  antecedentes_traumaticos: string;
+  antecedentes_ginecologicos: string;
+  examen_fisico: string;
+  presion_arterial: string;
+  frecuencia_cardiaca: string;
+  frecuencia_respiratoria: string;
+  temperatura: string;
+  saturacion_oxigeno: string;
+  impresion_clinica: string;
   diagnostico: string;
   tratamiento: string;
+  conducta: string;
+  tipo_atencion: string;
+  dieta: string;
+  soluciones: string;
+  ultrasonido: string;
+  rayos_x: string;
+  ordenes_especiales: string;
+  diagnostico_egreso: string;
+  fecha_egreso: string;
   observaciones: string;
   costo_consulta: string;
 }
@@ -47,11 +69,39 @@ function buildVisitFormState(): VisitFormState {
     date: toDateInputValue(),
     time: toTimeInputValue(),
     motivo: "",
+    historia_enfermedad_actual: "",
+    antecedentes_medicos: "",
+    antecedentes_quirurgicos: "",
+    antecedentes_alergicos: "",
+    antecedentes_traumaticos: "",
+    antecedentes_ginecologicos: "",
+    examen_fisico: "",
+    presion_arterial: "",
+    frecuencia_cardiaca: "",
+    frecuencia_respiratoria: "",
+    temperatura: "",
+    saturacion_oxigeno: "",
+    impresion_clinica: "",
     diagnostico: "",
     tratamiento: "",
+    conducta: "",
+    tipo_atencion: "ambulatorio",
+    dieta: "",
+    soluciones: "",
+    ultrasonido: "",
+    rayos_x: "",
+    ordenes_especiales: "",
+    diagnostico_egreso: "",
+    fecha_egreso: "",
     observaciones: "",
     costo_consulta: "350",
   };
+}
+
+function optionalNumber(value: string) {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function VisitFormModal({
@@ -74,8 +124,8 @@ function VisitFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div className="w-full max-w-3xl rounded-[28px] border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+      <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
               Expediente clinico
@@ -208,6 +258,84 @@ function VisitFormModal({
             />
           </div>
 
+          <section className="space-y-4 border-t border-slate-100 pt-5">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Historia de la enfermedad actual</h3>
+              <p className="text-xs text-slate-500">Evolucion, inicio, intensidad y sintomas asociados.</p>
+            </div>
+            <textarea
+              rows={4}
+              value={form.historia_enfermedad_actual}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, historia_enfermedad_actual: event.target.value }))
+              }
+              className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-5">
+            <h3 className="text-sm font-semibold text-slate-900">Antecedentes</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {([
+                ["antecedentes_medicos", "Medicos"],
+                ["antecedentes_quirurgicos", "Quirurgicos"],
+                ["antecedentes_alergicos", "Alergicos"],
+                ["antecedentes_traumaticos", "Traumaticos"],
+                ["antecedentes_ginecologicos", "Ginecologicos"],
+              ] as const).map(([field, label]) => (
+                <div key={field} className={field === "antecedentes_ginecologicos" ? "md:col-span-2" : ""}>
+                  <label className="text-sm font-medium text-slate-700">{label}</label>
+                  <textarea
+                    rows={2}
+                    value={form[field]}
+                    onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                    className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-5">
+            <h3 className="text-sm font-semibold text-slate-900">Examen fisico y signos vitales</h3>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+              {([
+                ["presion_arterial", "P/A", "110/70"],
+                ["frecuencia_cardiaca", "FC (lpm)", "80"],
+                ["frecuencia_respiratoria", "FR (rpm)", "18"],
+                ["temperatura", "Temperatura C", "36.5"],
+                ["saturacion_oxigeno", "SpO2 %", "97"],
+              ] as const).map(([field, label, placeholder]) => (
+                <div key={field}>
+                  <label className="text-xs font-medium text-slate-600">{label}</label>
+                  <input
+                    value={form[field]}
+                    onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                    placeholder={placeholder}
+                    className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+              ))}
+            </div>
+            <textarea
+              rows={4}
+              value={form.examen_fisico}
+              onChange={(event) => setForm((current) => ({ ...current, examen_fisico: event.target.value }))}
+              placeholder="Hallazgos del examen fisico"
+              className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </section>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">Impresion clinica</label>
+            <textarea
+              rows={3}
+              value={form.impresion_clinica}
+              onChange={(event) => setForm((current) => ({ ...current, impresion_clinica: event.target.value }))}
+              className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            />
+          </div>
+
           <div>
             <label className="text-sm font-medium text-slate-700">Diagnostico *</label>
             <textarea
@@ -232,6 +360,59 @@ function VisitFormModal({
               className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
             />
           </div>
+
+          <section className="space-y-4 border-t border-slate-100 pt-5">
+            <h3 className="text-sm font-semibold text-slate-900">Conducta y ordenes medicas</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Conducta</label>
+                <textarea rows={3} value={form.conducta} onChange={(event) => setForm((current) => ({ ...current, conducta: event.target.value }))} className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Tipo de atencion</label>
+                <select value={form.tipo_atencion} onChange={(event) => setForm((current) => ({ ...current, tipo_atencion: event.target.value }))} className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400">
+                  <option value="ambulatorio">Ambulatorio</option>
+                  <option value="encamamiento">Encamamiento</option>
+                  <option value="referencia">Referencia</option>
+                  <option value="observacion">Observacion</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Dieta</label>
+                <input value={form.dieta} onChange={(event) => setForm((current) => ({ ...current, dieta: event.target.value }))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Soluciones</label>
+                <input value={form.soluciones} onChange={(event) => setForm((current) => ({ ...current, soluciones: event.target.value }))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Ultrasonido</label>
+                <textarea rows={2} value={form.ultrasonido} onChange={(event) => setForm((current) => ({ ...current, ultrasonido: event.target.value }))} className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Rayos X</label>
+                <textarea rows={2} value={form.rayos_x} onChange={(event) => setForm((current) => ({ ...current, rayos_x: event.target.value }))} className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-slate-700">Ordenes especiales</label>
+                <textarea rows={2} value={form.ordenes_especiales} onChange={(event) => setForm((current) => ({ ...current, ordenes_especiales: event.target.value }))} className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-slate-100 pt-5">
+            <h3 className="text-sm font-semibold text-slate-900">Egreso o referencia</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_260px]">
+              <div>
+                <label className="text-sm font-medium text-slate-700">Diagnostico de egreso</label>
+                <textarea rows={2} value={form.diagnostico_egreso} onChange={(event) => setForm((current) => ({ ...current, diagnostico_egreso: event.target.value }))} className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Fecha y hora</label>
+                <input type="datetime-local" value={form.fecha_egreso} onChange={(event) => setForm((current) => ({ ...current, fecha_egreso: event.target.value }))} className="mt-1.5 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400" />
+              </div>
+            </div>
+          </section>
 
           <div>
             <label className="text-sm font-medium text-slate-700">Observaciones</label>
@@ -325,6 +506,41 @@ function RecordDetailModal({
             </div>
           </div>
 
+          <section className="rounded-3xl border border-slate-200 bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">Motivo e historia de la enfermedad actual</p>
+            <p className="mt-3 text-sm leading-6 text-slate-700">{visit.motivo}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {visit.historia_enfermedad_actual || "Sin historia de enfermedad actual registrada."}
+            </p>
+          </section>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {[
+              ["Medicos", visit.antecedentes_medicos],
+              ["Quirurgicos", visit.antecedentes_quirurgicos],
+              ["Alergicos", visit.antecedentes_alergicos],
+              ["Traumaticos", visit.antecedentes_traumaticos],
+              ["Ginecologicos", visit.antecedentes_ginecologicos],
+            ].map(([label, value]) => (
+              <section key={label} className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
+                <p className="mt-2 text-sm text-slate-700">{value || "No registrado"}</p>
+              </section>
+            ))}
+          </div>
+
+          <section className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p className="text-sm font-semibold text-slate-900">Examen fisico</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <span className="rounded-xl bg-white px-3 py-2 text-sm text-slate-600">P/A {visit.presion_arterial || "-"}</span>
+              <span className="rounded-xl bg-white px-3 py-2 text-sm text-slate-600">FC {visit.frecuencia_cardiaca || "-"}</span>
+              <span className="rounded-xl bg-white px-3 py-2 text-sm text-slate-600">FR {visit.frecuencia_respiratoria || "-"}</span>
+              <span className="rounded-xl bg-white px-3 py-2 text-sm text-slate-600">T {visit.temperatura || "-"}</span>
+              <span className="rounded-xl bg-white px-3 py-2 text-sm text-slate-600">SpO2 {visit.saturacion_oxigeno || "-"}%</span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{visit.examen_fisico || "Sin hallazgos registrados."}</p>
+          </section>
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-4">
               <section className="rounded-3xl border border-amber-100 bg-amber-50 p-5">
@@ -333,6 +549,11 @@ function RecordDetailModal({
                   <p className="text-sm font-semibold">Diagnostico</p>
                 </div>
                 <p className="text-sm leading-6 text-slate-700">{visit.diagnostico}</p>
+                {visit.impresion_clinica && (
+                  <p className="mt-3 border-t border-amber-200 pt-3 text-sm text-slate-600">
+                    Impresion clinica: {visit.impresion_clinica}
+                  </p>
+                )}
               </section>
 
               <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
@@ -351,6 +572,33 @@ function RecordDetailModal({
                   {visit.observaciones || "Sin observaciones adicionales."}
                 </p>
               </section>
+
+              <section className="rounded-3xl border border-blue-100 bg-blue-50 p-5">
+                <p className="text-sm font-semibold text-blue-800">Conducta y ordenes</p>
+                <p className="mt-2 text-sm text-slate-700">{visit.conducta || "Sin conducta registrada."}</p>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                  <span>Atencion: {visit.tipo_atencion || "No indicada"}</span>
+                  <span>Dieta: {visit.dieta || "No indicada"}</span>
+                  <span>Soluciones: {visit.soluciones || "No indicadas"}</span>
+                  <span>Especiales: {visit.ordenes_especiales || "Ninguna"}</span>
+                </div>
+              </section>
+
+              {(visit.ultrasonido || visit.rayos_x) && (
+                <section className="rounded-3xl border border-cyan-100 bg-cyan-50 p-5">
+                  <p className="text-sm font-semibold text-cyan-800">Estudios de imagen</p>
+                  <p className="mt-2 text-sm text-slate-700">Ultrasonido: {visit.ultrasonido || "No registrado"}</p>
+                  <p className="mt-2 text-sm text-slate-700">Rayos X: {visit.rayos_x || "No registrado"}</p>
+                </section>
+              )}
+
+              {(visit.diagnostico_egreso || visit.fecha_egreso) && (
+                <section className="rounded-3xl border border-rose-100 bg-rose-50 p-5">
+                  <p className="text-sm font-semibold text-rose-800">Egreso o referencia</p>
+                  <p className="mt-2 text-sm text-slate-700">{visit.diagnostico_egreso || "Sin diagnostico de egreso."}</p>
+                  {visit.fecha_egreso && <p className="mt-2 text-xs text-slate-500">{formatDateTime(visit.fecha_egreso)}</p>}
+                </section>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -526,8 +774,30 @@ export default function MedicalRecords() {
         id_medico: Number(form.id_medico),
         fecha_visita: toDateTimePayload(form.date, form.time),
         motivo: form.motivo.trim(),
+        historia_enfermedad_actual: form.historia_enfermedad_actual.trim() || null,
+        antecedentes_medicos: form.antecedentes_medicos.trim() || null,
+        antecedentes_quirurgicos: form.antecedentes_quirurgicos.trim() || null,
+        antecedentes_alergicos: form.antecedentes_alergicos.trim() || null,
+        antecedentes_traumaticos: form.antecedentes_traumaticos.trim() || null,
+        antecedentes_ginecologicos: form.antecedentes_ginecologicos.trim() || null,
+        examen_fisico: form.examen_fisico.trim() || null,
+        presion_arterial: form.presion_arterial.trim() || null,
+        frecuencia_cardiaca: optionalNumber(form.frecuencia_cardiaca),
+        frecuencia_respiratoria: optionalNumber(form.frecuencia_respiratoria),
+        temperatura: optionalNumber(form.temperatura),
+        saturacion_oxigeno: optionalNumber(form.saturacion_oxigeno),
+        impresion_clinica: form.impresion_clinica.trim() || null,
         diagnostico: form.diagnostico.trim(),
         tratamiento: form.tratamiento.trim() || null,
+        conducta: form.conducta.trim() || null,
+        tipo_atencion: form.tipo_atencion || null,
+        dieta: form.dieta.trim() || null,
+        soluciones: form.soluciones.trim() || null,
+        ultrasonido: form.ultrasonido.trim() || null,
+        rayos_x: form.rayos_x.trim() || null,
+        ordenes_especiales: form.ordenes_especiales.trim() || null,
+        diagnostico_egreso: form.diagnostico_egreso.trim() || null,
+        fecha_egreso: form.fecha_egreso ? new Date(form.fecha_egreso).toISOString() : null,
         observaciones: form.observaciones.trim() || null,
         costo_consulta: Number(form.costo_consulta),
       });

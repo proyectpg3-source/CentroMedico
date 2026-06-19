@@ -57,7 +57,11 @@ function calculatePriority(input, history = []) {
   const text = normalizeText(
     [
       input.motivo,
+      input.motivo_consulta,
       input.triaje_notas,
+      input.historia_enfermedad_actual,
+      input.antecedentes_relevantes,
+      input.alergias_referidas,
       input.diagnostico,
       input.tratamiento,
       input.observaciones,
@@ -109,6 +113,48 @@ function calculatePriority(input, history = []) {
     pushUnique(reasons, "Paciente con historial clinico frecuente en el centro medico.");
   }
 
+  const temperature = Number(input.temperatura);
+  const oxygen = Number(input.saturacion_oxigeno);
+  const heartRate = Number(input.frecuencia_cardiaca);
+  const respiratoryRate = Number(input.frecuencia_respiratoria);
+  const systolicPressure = Number.parseInt(String(input.presion_arterial || "").split("/")[0], 10);
+
+  if (Number.isFinite(temperature) && temperature >= 39) {
+    score += 20;
+    pushUnique(reasons, "Temperatura elevada registrada en triaje.");
+  } else if (Number.isFinite(temperature) && temperature > 0 && temperature < 35) {
+    score += 20;
+    pushUnique(reasons, "Temperatura baja registrada en triaje.");
+  }
+
+  if (Number.isFinite(oxygen) && oxygen > 0 && oxygen < 92) {
+    score += 35;
+    pushUnique(reasons, "Saturacion de oxigeno en rango de alerta.");
+  } else if (Number.isFinite(oxygen) && oxygen >= 92 && oxygen < 95) {
+    score += 15;
+    pushUnique(reasons, "Saturacion de oxigeno que requiere vigilancia.");
+  }
+
+  if (Number.isFinite(heartRate) && heartRate > 0 && (heartRate >= 120 || heartRate <= 40)) {
+    score += 15;
+    pushUnique(reasons, "Frecuencia cardiaca fuera del rango esperado.");
+  }
+
+  if (Number.isFinite(respiratoryRate) && respiratoryRate > 0) {
+    if (respiratoryRate >= 30 || respiratoryRate <= 8) {
+      score += 25;
+      pushUnique(reasons, "Frecuencia respiratoria en rango de alerta.");
+    } else if (respiratoryRate >= 21) {
+      score += 10;
+      pushUnique(reasons, "Frecuencia respiratoria que requiere vigilancia.");
+    }
+  }
+
+  if (Number.isFinite(systolicPressure) && systolicPressure > 0 && (systolicPressure >= 180 || systolicPressure < 90)) {
+    score += 20;
+    pushUnique(reasons, "Presion arterial sistolica en rango de alerta.");
+  }
+
   const finalScore = Math.min(score, 100);
   return {
     puntaje_prioridad: finalScore,
@@ -138,9 +184,16 @@ async function calcularPrioridadParaPaciente(idPaciente, input, queryRunner = po
 
 async function aplicarPrioridadACita(idCita, queryRunner = pool) {
   const citaResult = await queryRunner.query(
-    `SELECT id_cita, id_paciente, motivo, triaje_notas
-     FROM citas
-     WHERE id_cita = $1`,
+    `SELECT
+       c.id_cita, c.id_paciente, c.motivo, c.triaje_notas,
+       t.motivo_consulta, t.historia_enfermedad_actual,
+       t.antecedentes_relevantes, t.alergias_referidas,
+       t.presion_arterial, t.frecuencia_cardiaca,
+       t.frecuencia_respiratoria, t.temperatura, t.saturacion_oxigeno,
+       t.observaciones
+     FROM citas c
+     LEFT JOIN triajes t ON t.id_cita = c.id_cita
+     WHERE c.id_cita = $1`,
     [idCita]
   );
   const cita = citaResult.rows[0];
@@ -195,6 +248,18 @@ async function getColaPriorizada() {
        c.hora_llegada,
        c.hora_inicio_atencion,
        c.hora_fin_atencion,
+       t.id_triaje,
+       t.fecha_triaje,
+       t.motivo_consulta,
+       t.historia_enfermedad_actual,
+       t.antecedentes_relevantes,
+       t.alergias_referidas,
+       t.presion_arterial,
+       t.frecuencia_cardiaca,
+       t.frecuencia_respiratoria,
+       t.temperatura,
+       t.saturacion_oxigeno,
+       t.peso,
        GREATEST(
          0,
          ROUND(EXTRACT(EPOCH FROM (COALESCE(c.hora_inicio_atencion, NOW()) - COALESCE(c.hora_llegada, c.fecha_hora))) / 60)
@@ -217,6 +282,7 @@ async function getColaPriorizada() {
      FROM citas c
      LEFT JOIN pacientes p ON p.id_paciente = c.id_paciente
      LEFT JOIN medicos m ON m.id_medico = c.id_medico
+     LEFT JOIN triajes t ON t.id_cita = c.id_cita
      WHERE c.estado IN ('pendiente', 'confirmada', 'en_curso')
      ORDER BY
        c.puntaje_prioridad DESC,

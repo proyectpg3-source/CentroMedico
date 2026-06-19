@@ -13,6 +13,7 @@ async function main() {
           (SELECT COUNT(*)::int FROM pacientes) AS pacientes,
           (SELECT COUNT(*)::int FROM medicos) AS medicos,
           (SELECT COUNT(*)::int FROM citas) AS citas,
+          (SELECT COUNT(*)::int FROM triajes) AS triajes,
           (SELECT COUNT(*)::int FROM visitas_medicas) AS visitas,
           (SELECT COUNT(*)::int FROM ordenes_laboratorio) AS ordenes_laboratorio,
           (SELECT COUNT(*)::int FROM resultados_laboratorio) AS resultados_laboratorio,

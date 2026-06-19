@@ -4,6 +4,7 @@ import {
   BarChart3,
   BrainCircuit,
   CalendarDays,
+  ClipboardPlus,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -31,6 +32,7 @@ const navigation = [
     items: [
       { to: "/patients", icon: Users, label: "Pacientes" },
       { to: "/appointments", icon: CalendarDays, label: "Citas medicas" },
+      { to: "/triage", icon: ClipboardPlus, label: "Triaje" },
       { to: "/doctors", icon: Stethoscope, label: "Doctores" },
       { to: "/records", icon: FileText, label: "Expedientes" },
     ],

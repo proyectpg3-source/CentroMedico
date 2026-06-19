@@ -19,7 +19,15 @@ const CITA_SELECT = `
 const VISITA_SELECT = `
   SELECT
     v.id_visita, v.id_cita, v.id_paciente, v.id_medico,
-    v.fecha_visita, v.motivo, v.diagnostico, v.tratamiento,
+    v.fecha_visita, v.motivo, v.historia_enfermedad_actual,
+    v.antecedentes_medicos, v.antecedentes_quirurgicos,
+    v.antecedentes_alergicos, v.antecedentes_traumaticos,
+    v.antecedentes_ginecologicos, v.examen_fisico,
+    v.presion_arterial, v.frecuencia_cardiaca, v.frecuencia_respiratoria,
+    v.temperatura, v.saturacion_oxigeno, v.impresion_clinica,
+    v.diagnostico, v.tratamiento, v.conducta, v.tipo_atencion,
+    v.dieta, v.soluciones, v.ultrasonido, v.rayos_x,
+    v.ordenes_especiales, v.diagnostico_egreso, v.fecha_egreso,
     v.observaciones, v.costo_consulta, v.created_at, v.updated_at,
     p.nombre AS paciente_nombre, p.dni AS paciente_dni,
     p.telefono AS paciente_telefono, p.email AS paciente_email,
