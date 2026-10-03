@@ -33,3 +33,14 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Logs de servidores de desarrollo
+*.log
+
+# Archivos de bloqueo de Office
+~$*
+
+# Artefactos generados
+docs/entrega-arquitectura/render/
+tests/selenium/resultados/
+tests/selenium.zip

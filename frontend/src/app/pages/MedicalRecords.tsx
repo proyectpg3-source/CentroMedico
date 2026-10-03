@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import { fetchDoctors, type DoctorRecord } from "../api/doctors";
 import { fetchLabOrders, type LabOrderRecord } from "../api/laboratory";
 import { fetchPatients, type PatientRecord } from "../api/patients";
@@ -896,17 +897,19 @@ export default function MedicalRecords() {
                 Historia clinica real con diagnosticos, tratamientos y trazabilidad operativa
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitError(null);
-                setShowCreateModal(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-            >
-              <FilePlus2 className="h-4 w-4" />
-              Nueva visita
-            </button>
+            <Can module="records" action="create">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitError(null);
+                  setShowCreateModal(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              >
+                <FilePlus2 className="h-4 w-4" />
+                Nueva visita
+              </button>
+            </Can>
           </div>
 
           <div className="mt-5 flex flex-col gap-3 xl:flex-row">

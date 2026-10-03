@@ -1,8 +1,11 @@
 const express = require("express");
+const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
 const service = require("./triajes.service");
 
 const router = express.Router();
+router.use(requireAuth);
+router.use(requireRole("admin", "medico", "enfermero"));
 
 router.get("/", async (req, res) => {
   try {
@@ -24,7 +27,7 @@ router.get("/cita/:id", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireRole("admin", "enfermero"), async (req, res) => {
   try {
     const data = service.sanitize(req.body);
     if (!service.validate(data, res)) return;

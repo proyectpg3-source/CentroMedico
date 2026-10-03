@@ -1,0 +1,150 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1740" height="920" viewBox="0 0 1740 920">
+  <rect width="1740" height="920" fill="#ffffff"/>
+  <style>
+    .title {
+      font: 700 30px Arial, Helvetica, sans-serif;
+      fill: #000000;
+    }
+    .object-title {
+      font: 700 16px Arial, Helvetica, sans-serif;
+      fill: #000000;
+      text-decoration: underline;
+    }
+    .object-attr {
+      font: 14px Consolas, "Courier New", monospace;
+      fill: #000000;
+    }
+    .link-label {
+      font: 700 13px Arial, Helvetica, sans-serif;
+      fill: #000000;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: #ffffff;
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+  </style>
+
+  <text x="70" y="50" class="title">DO-01 - Diagrama de objetos del sistema</text>
+
+  <g class="link">
+  <line x1="225" y1="172.5" x2="640" y2="182.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="640" y1="182.5" x2="1105" y2="182.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="1105" y1="182.5" x2="1045" y2="467.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="1045" y1="467.5" x2="1525" y2="457.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="225" y1="172.5" x2="235" y2="747.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="640" y1="182.5" x2="657.5" y2="757.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="657.5" y1="757.5" x2="235" y2="747.5" stroke="#000000" stroke-width="2"/>
+</g>
+<g class="link">
+  <line x1="657.5" y1="757.5" x2="1132.5" y2="757.5" stroke="#000000" stroke-width="2"/>
+</g>
+
+  <g id="Paciente">
+  <rect x="70" y="105" width="310" height="135" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="70" y1="143" x2="380" y2="143" stroke="#000000" stroke-width="1.8"/>
+  <text x="84" y="130" class="object-title">paciente01 : Paciente</text>
+  <text x="84" y="167" class="object-attr">idPaciente = 001</text>
+  <text x="84" y="191" class="object-attr">nombre = Paciente registrado</text>
+  <text x="84" y="215" class="object-attr">estado = Activo</text>
+</g>
+<g id="Atencion">
+  <rect x="475" y="105" width="330" height="155" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="475" y1="143" x2="805" y2="143" stroke="#000000" stroke-width="1.8"/>
+  <text x="489" y="130" class="object-title">atencion01 : Atencion</text>
+  <text x="489" y="167" class="object-attr">idAtencion = 001</text>
+  <text x="489" y="191" class="object-attr">motivoConsulta = Registrado</text>
+  <text x="489" y="215" class="object-attr">estado = En atencion</text>
+  <text x="489" y="239" class="object-attr">fecha = Fecha actual</text>
+</g>
+<g id="Evaluacion">
+  <rect x="910" y="105" width="390" height="155" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="910" y1="143" x2="1300" y2="143" stroke="#000000" stroke-width="1.8"/>
+  <text x="924" y="130" class="object-title">evaluacion01 : EvaluacionInicial</text>
+  <text x="924" y="167" class="object-attr">idEvaluacion = 001</text>
+  <text x="924" y="191" class="object-attr">signosVitales = Registrados</text>
+  <text x="924" y="215" class="object-attr">observaciones = Registradas</text>
+  <text x="924" y="239" class="object-attr">estado = Completa</text>
+</g>
+<g id="Prioridad">
+  <rect x="880" y="390" width="330" height="155" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="880" y1="428" x2="1210" y2="428" stroke="#000000" stroke-width="1.8"/>
+  <text x="894" y="415" class="object-title">prioridad01 : Prioridad</text>
+  <text x="894" y="452" class="object-attr">idPrioridad = 001</text>
+  <text x="894" y="476" class="object-attr">nivel = Asignado</text>
+  <text x="894" y="500" class="object-attr">origen = Sistema</text>
+  <text x="894" y="524" class="object-attr">estado = Vigente</text>
+</g>
+<g id="Cola">
+  <rect x="1375" y="390" width="300" height="135" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="1375" y1="428" x2="1675" y2="428" stroke="#000000" stroke-width="1.8"/>
+  <text x="1389" y="415" class="object-title">cola01 : ColaAtencion</text>
+  <text x="1389" y="452" class="object-attr">idCola = 001</text>
+  <text x="1389" y="476" class="object-attr">posicion = Asignada</text>
+  <text x="1389" y="500" class="object-attr">estado = En espera</text>
+</g>
+<g id="Historia">
+  <rect x="70" y="680" width="330" height="135" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="70" y1="718" x2="400" y2="718" stroke="#000000" stroke-width="1.8"/>
+  <text x="84" y="705" class="object-title">historia01 : HistoriaClinica</text>
+  <text x="84" y="742" class="object-attr">idHistoria = 001</text>
+  <text x="84" y="766" class="object-attr">paciente = paciente01</text>
+  <text x="84" y="790" class="object-attr">estado = Actualizada</text>
+</g>
+<g id="Consulta">
+  <rect x="475" y="680" width="365" height="155" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="475" y1="718" x2="840" y2="718" stroke="#000000" stroke-width="1.8"/>
+  <text x="489" y="705" class="object-title">consulta01 : ConsultaMedica</text>
+  <text x="489" y="742" class="object-attr">idConsulta = 001</text>
+  <text x="489" y="766" class="object-attr">impresionClinica = Registrada</text>
+  <text x="489" y="790" class="object-attr">tratamiento = Registrado</text>
+  <text x="489" y="814" class="object-attr">estado = Finalizada</text>
+</g>
+<g id="Estudio">
+  <rect x="960" y="680" width="345" height="155" rx="0" fill="#ffffff" stroke="#000000" stroke-width="2.2"/>
+  <line x1="960" y1="718" x2="1305" y2="718" stroke="#000000" stroke-width="1.8"/>
+  <text x="974" y="705" class="object-title">estudio01 : EstudioClinico</text>
+  <text x="974" y="742" class="object-attr">idEstudio = 001</text>
+  <text x="974" y="766" class="object-attr">tipo = Solicitado</text>
+  <text x="974" y="790" class="object-attr">resultado = Pendiente / registrado</text>
+  <text x="974" y="814" class="object-attr">estado = Vigente</text>
+</g>
+
+  <g class="link-label-group">
+  <text x="445" y="213" class="link-label">posee</text>
+</g>
+<g class="link-label-group">
+  <text x="875" y="213" class="link-label">incluye</text>
+</g>
+<g class="link-label-group">
+  <text x="1120" y="350" class="link-label">origina</text>
+</g>
+<g class="link-label-group">
+  <text x="1294" y="467" class="link-label">determina posicion</text>
+</g>
+<g class="link-label-group">
+  <text x="255" y="500" class="link-label">mantiene</text>
+</g>
+<g class="link-label-group">
+  <text x="650" y="495" class="link-label">genera</text>
+</g>
+<g class="link-label-group">
+  <text x="445" y="760" class="link-label">actualiza</text>
+</g>
+<g class="link-label-group">
+  <text x="925" y="760" class="link-label">puede solicitar</text>
+</g>
+</svg>

@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import { fetchAppointments, type AppointmentRecord } from "../api/appointments";
 import {
+  createLabSupply,
   createLabOrder,
+  fetchLabSupplies,
+  fetchLabSupplyAlerts,
   fetchLabOrders,
+  registerLabSupplyMovement,
   saveLabResult,
+  updateLabSupply,
   updateLabOrderStatus,
+  type LabSupplyAlertsResponse,
+  type LabSupplyRecord,
   type LabOrderRecord,
   type LaboratoryOrderStatus,
   type LaboratoryPriority,
@@ -14,18 +22,23 @@ import { fetchPatients, type PatientRecord } from "../api/patients";
 import { fetchVisits, type VisitRecord } from "../api/visits";
 import {
   AlertCircle,
+  ArrowDownUp,
   Beaker,
   CheckCircle2,
   Clock3,
   FilePlus2,
   FlaskConical,
   Loader2,
+  Package,
+  Plus,
+  RefreshCw,
   Search,
   ShieldAlert,
   X,
 } from "lucide-react";
 import {
   formatCurrency,
+  formatDate,
   formatDateTime,
   getErrorMessage,
   numericValue,
@@ -44,6 +57,21 @@ interface ResultFormState {
   resultado: string;
   observaciones: string;
   validado_por: string;
+}
+
+interface SupplyFormState {
+  nombre: string;
+  categoria: string;
+  unidad: string;
+  stock: string;
+  stock_minimo: string;
+  fecha_vencimiento: string;
+}
+
+interface MovementFormState {
+  tipo: "entrada" | "salida";
+  cantidad: string;
+  motivo: string;
 }
 
 const orderStatuses: LaboratoryOrderStatus[] = [
@@ -95,6 +123,35 @@ function buildResultFormState(order: LabOrderRecord): ResultFormState {
     resultado: order.resultado || "",
     observaciones: order.resultado_observaciones || "",
     validado_por: order.validado_por || "",
+  };
+}
+
+function buildSupplyFormState(supply?: LabSupplyRecord | null): SupplyFormState {
+  return {
+    nombre: supply?.nombre || "",
+    categoria: supply?.categoria || "Laboratorio",
+    unidad: supply?.unidad || "unidad",
+    stock: String(supply?.stock ?? 0),
+    stock_minimo: String(supply?.stock_minimo ?? 0),
+    fecha_vencimiento: supply?.fecha_vencimiento
+      ? supply.fecha_vencimiento.slice(0, 10)
+      : "",
+  };
+}
+
+function buildEmptyAlerts(): LabSupplyAlertsResponse {
+  return {
+    source: "frontend",
+    generatedAt: new Date().toISOString(),
+    summary: {
+      totalItems: 0,
+      totalAlerts: 0,
+      lowStock: 0,
+      outOfStock: 0,
+      expired: 0,
+      expiringSoon: 0,
+    },
+    alerts: [],
   };
 }
 
@@ -388,8 +445,257 @@ function ResultFormModal({
   );
 }
 
+function SupplyFormModal({
+  supply,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  errorMessage,
+}: {
+  supply: LabSupplyRecord | null;
+  onClose: () => void;
+  onSubmit: (form: SupplyFormState) => void;
+  isSubmitting: boolean;
+  errorMessage: string | null;
+}) {
+  const [form, setForm] = useState<SupplyFormState>(() => buildSupplyFormState(supply));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div className="w-full max-w-2xl rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-600">
+              Inventario
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-900">
+              {supply ? "Editar insumo" : "Nuevo insumo"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit(form);
+          }}
+          className="space-y-5 px-6 py-6"
+        >
+          {errorMessage && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {errorMessage}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-slate-700">Nombre *</label>
+              <input
+                required
+                value={form.nombre}
+                onChange={(event) => setForm((current) => ({ ...current, nombre: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                placeholder="Ej. Tubos Vacutainer, reactivo de glucosa"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Categoria</label>
+              <input
+                value={form.categoria}
+                onChange={(event) => setForm((current) => ({ ...current, categoria: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Unidad</label>
+              <input
+                value={form.unidad}
+                onChange={(event) => setForm((current) => ({ ...current, unidad: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                placeholder="unidad, caja, ml"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Stock *</label>
+              <input
+                required
+                type="number"
+                min="0"
+                value={form.stock}
+                onChange={(event) => setForm((current) => ({ ...current, stock: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Stock minimo *</label>
+              <input
+                required
+                type="number"
+                min="0"
+                value={form.stock_minimo}
+                onChange={(event) => setForm((current) => ({ ...current, stock_minimo: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-slate-700">Fecha de vencimiento</label>
+              <input
+                type="date"
+                value={form.fecha_vencimiento}
+                onChange={(event) => setForm((current) => ({ ...current, fecha_vencimiento: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Guardar insumo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function SupplyMovementModal({
+  supply,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  errorMessage,
+}: {
+  supply: LabSupplyRecord;
+  onClose: () => void;
+  onSubmit: (form: MovementFormState) => void;
+  isSubmitting: boolean;
+  errorMessage: string | null;
+}) {
+  const [form, setForm] = useState<MovementFormState>({
+    tipo: "entrada",
+    cantidad: "1",
+    motivo: "",
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div className="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-600">
+              Movimiento de stock
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-900">{supply.nombre}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Stock actual: {supply.stock} {supply.unidad}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit(form);
+          }}
+          className="space-y-5 px-6 py-6"
+        >
+          {errorMessage && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {errorMessage}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-slate-700">Tipo</label>
+              <select
+                value={form.tipo}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, tipo: event.target.value as MovementFormState["tipo"] }))
+                }
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
+              >
+                <option value="entrada">Entrada</option>
+                <option value="salida">Salida</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Cantidad *</label>
+              <input
+                required
+                type="number"
+                min="1"
+                value={form.cantidad}
+                onChange={(event) => setForm((current) => ({ ...current, cantidad: event.target.value }))}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700">Motivo</label>
+            <textarea
+              rows={3}
+              value={form.motivo}
+              onChange={(event) => setForm((current) => ({ ...current, motivo: event.target.value }))}
+              className="mt-1.5 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-teal-400 focus:ring-4 focus:ring-teal-100"
+              placeholder="Compra, consumo en prueba, vencimiento, ajuste..."
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Registrar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Laboratory() {
   const [orders, setOrders] = useState<LabOrderRecord[]>([]);
+  const [supplies, setSupplies] = useState<LabSupplyRecord[]>([]);
+  const [supplyAlerts, setSupplyAlerts] = useState<LabSupplyAlertsResponse>(() => buildEmptyAlerts());
   const [patients, setPatients] = useState<PatientRecord[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [visits, setVisits] = useState<VisitRecord[]>([]);
@@ -402,6 +708,9 @@ export default function Laboratory() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<LabOrderRecord | null>(null);
+  const [showSupplyModal, setShowSupplyModal] = useState(false);
+  const [selectedSupply, setSelectedSupply] = useState<LabSupplyRecord | null>(null);
+  const [movementSupply, setMovementSupply] = useState<LabSupplyRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 
@@ -410,15 +719,26 @@ export default function Laboratory() {
       setLoading(true);
       setError(null);
 
-      const [ordersResponse, patientsResponse, appointmentsResponse, visitsResponse] =
+      const [
+        ordersResponse,
+        supplyResponse,
+        supplyAlertsResponse,
+        patientsResponse,
+        appointmentsResponse,
+        visitsResponse,
+      ] =
         await Promise.all([
           fetchLabOrders(undefined, signal),
+          fetchLabSupplies(undefined, signal),
+          fetchLabSupplyAlerts(signal),
           fetchPatients(signal),
           fetchAppointments(undefined, signal),
           fetchVisits(undefined, signal),
         ]);
 
       setOrders(ordersResponse);
+      setSupplies(supplyResponse);
+      setSupplyAlerts(supplyAlertsResponse);
       setPatients(patientsResponse);
       setAppointments(appointmentsResponse);
       setVisits(visitsResponse);
@@ -464,6 +784,10 @@ export default function Laboratory() {
     });
   }, [filterPriority, filterStatus, orders, search]);
 
+  const criticalSupplies = useMemo(() => {
+    return supplies.filter((supply) => Number(supply.stock) <= Number(supply.stock_minimo));
+  }, [supplies]);
+
   const stats = useMemo(() => {
     const totalCost = orders.reduce((sum, order) => sum + numericValue(order.costo), 0);
     return {
@@ -473,8 +797,11 @@ export default function Laboratory() {
       pending: orders.filter((order) => order.estado === "pendiente").length,
       alerts: orders.filter((order) => order.prioridad === "urgente").length,
       totalCost,
+      supplies: supplies.length,
+      lowSupplies: supplyAlerts.summary.lowStock || criticalSupplies.length,
+      supplyAlerts: supplyAlerts.summary.totalAlerts || 0,
     };
-  }, [orders]);
+  }, [criticalSupplies.length, orders, supplies.length, supplyAlerts.summary.lowStock, supplyAlerts.summary.totalAlerts]);
 
   async function handleCreateOrder(form: OrderFormState) {
     setSubmitError(null);
@@ -543,6 +870,63 @@ export default function Laboratory() {
       );
     } finally {
       setStatusUpdatingId(null);
+    }
+  }
+
+  async function handleSaveSupply(form: SupplyFormState) {
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        nombre: form.nombre.trim(),
+        categoria: form.categoria.trim() || "Laboratorio",
+        unidad: form.unidad.trim() || "unidad",
+        stock: Number(form.stock),
+        stock_minimo: Number(form.stock_minimo),
+        fecha_vencimiento: form.fecha_vencimiento || null,
+      };
+
+      if (selectedSupply) {
+        await updateLabSupply(selectedSupply.id_insumo, payload);
+        setSuccessMessage("El insumo se actualizo correctamente.");
+      } else {
+        await createLabSupply(payload);
+        setSuccessMessage("El insumo se registro correctamente.");
+      }
+
+      setShowSupplyModal(false);
+      setSelectedSupply(null);
+      await loadData();
+    } catch (saveError) {
+      setSubmitError(getErrorMessage(saveError, "No se pudo guardar el insumo."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleRegisterMovement(form: MovementFormState) {
+    if (!movementSupply) {
+      return;
+    }
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      await registerLabSupplyMovement(movementSupply.id_insumo, {
+        tipo: form.tipo,
+        cantidad: Number(form.cantidad),
+        motivo: form.motivo.trim() || null,
+      });
+
+      setMovementSupply(null);
+      setSuccessMessage("El movimiento de inventario se registro correctamente.");
+      await loadData();
+    } catch (movementError) {
+      setSubmitError(getErrorMessage(movementError, "No se pudo registrar el movimiento."));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -624,17 +1008,19 @@ export default function Laboratory() {
                 Ordenes trazadas por paciente, visita o cita con captura de resultado
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitError(null);
-                setShowOrderModal(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-            >
-              <FilePlus2 className="h-4 w-4" />
-              Nueva orden
-            </button>
+            <Can module="laboratory" action="create">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitError(null);
+                  setShowOrderModal(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              >
+                <FilePlus2 className="h-4 w-4" />
+                Nueva orden
+              </button>
+            </Can>
           </div>
 
           <div className="mt-5 flex flex-col gap-3 xl:flex-row">
@@ -777,17 +1163,19 @@ export default function Laboratory() {
                     ))}
                   </select>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubmitError(null);
-                      setSelectedOrder(order);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
-                  >
-                    <FlaskConical className="h-4 w-4" />
-                    {order.resultado ? "Editar resultado" : "Cargar resultado"}
-                  </button>
+                  <Can module="laboratory" action="edit">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubmitError(null);
+                        setSelectedOrder(order);
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+                    >
+                      <FlaskConical className="h-4 w-4" />
+                      {order.resultado ? "Editar resultado" : "Cargar resultado"}
+                    </button>
+                  </Can>
 
                   {order.validado_por && (
                     <div className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
@@ -800,6 +1188,187 @@ export default function Laboratory() {
             ))}
           </div>
         )}
+
+        <div className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                <Package className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Inventario de insumos</h2>
+                <p className="text-sm text-slate-500">
+                  Stock de laboratorio conectado al microservicio de alertas
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void loadData()}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Actualizar
+              </button>
+              <Can module="laboratory" action="create">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmitError(null);
+                    setSelectedSupply(null);
+                    setShowSupplyModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Nuevo insumo
+                </button>
+              </Can>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Insumos
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.supplies}</p>
+            </div>
+            <div className="rounded-2xl bg-amber-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                Alertas
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-amber-900">
+                {stats.supplyAlerts}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-rose-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">
+                Bajo minimo
+              </p>
+              <p className="mt-1 text-2xl font-semibold text-rose-900">{stats.lowSupplies}</p>
+            </div>
+          </div>
+
+          {supplyAlerts.serviceWarning && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              El backend uso calculo local porque el microservicio respondio con aviso: {supplyAlerts.serviceWarning}
+            </div>
+          )}
+
+          <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold text-slate-900">Alertas del inventario</h3>
+              <div className="mt-3 space-y-2">
+                {supplyAlerts.alerts.length ? (
+                  supplyAlerts.alerts.slice(0, 5).map((alert) => (
+                    <div key={alert.key} className="rounded-2xl bg-white px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{alert.name}</p>
+                          <p className="mt-1 text-xs text-slate-500">{alert.detail}</p>
+                          <p className="mt-1 text-xs text-slate-400">{alert.recommendation}</p>
+                        </div>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                          {alert.badge}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-slate-400">
+                    Sin alertas activas de stock o vencimiento.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-100">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Insumo</th>
+                      <th className="px-4 py-3">Categoria</th>
+                      <th className="px-4 py-3">Stock</th>
+                      <th className="px-4 py-3">Vence</th>
+                      <th className="px-4 py-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {supplies.map((supply) => {
+                      const isLow = Number(supply.stock) <= Number(supply.stock_minimo);
+                      return (
+                        <tr key={supply.id_insumo} className="bg-white">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-slate-900">{supply.nombre}</p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              Minimo {supply.stock_minimo} {supply.unidad}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">{supply.categoria}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                                isLow
+                                  ? "bg-rose-50 text-rose-700"
+                                  : "bg-emerald-50 text-emerald-700"
+                              }`}
+                            >
+                              {supply.stock} {supply.unidad}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {formatDate(supply.fecha_vencimiento)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Can module="laboratory" action="edit">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSubmitError(null);
+                                    setMovementSupply(supply);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 rounded-xl border border-teal-200 px-3 py-1.5 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-50"
+                                >
+                                  <ArrowDownUp className="h-3.5 w-3.5" />
+                                  Movimiento
+                                </button>
+                              </Can>
+                              <Can module="laboratory" action="edit">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSubmitError(null);
+                                    setSelectedSupply(supply);
+                                    setShowSupplyModal(true);
+                                  }}
+                                  className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                                >
+                                  Editar
+                                </button>
+                              </Can>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {!supplies.length && (
+                <div className="px-6 py-10 text-center">
+                  <Package className="mx-auto h-10 w-10 text-slate-300" />
+                  <p className="mt-3 text-sm text-slate-500">
+                    Aun no hay insumos registrados.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.9fr]">
           <div className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -867,6 +1436,29 @@ export default function Laboratory() {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onSubmit={handleSaveResult}
+          isSubmitting={isSubmitting}
+          errorMessage={submitError}
+        />
+      )}
+
+      {showSupplyModal && (
+        <SupplyFormModal
+          supply={selectedSupply}
+          onClose={() => {
+            setShowSupplyModal(false);
+            setSelectedSupply(null);
+          }}
+          onSubmit={handleSaveSupply}
+          isSubmitting={isSubmitting}
+          errorMessage={submitError}
+        />
+      )}
+
+      {movementSupply && (
+        <SupplyMovementModal
+          supply={movementSupply}
+          onClose={() => setMovementSupply(null)}
+          onSubmit={handleRegisterMovement}
           isSubmitting={isSubmitting}
           errorMessage={submitError}
         />

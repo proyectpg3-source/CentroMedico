@@ -2,80 +2,105 @@
 
 :root {
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
+  --background: #f1f8f5;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  /* Marca: verde esmeralda medico */
+  --primary: #059669;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e1f5ee;
+  --accent-foreground: #085041;
+
+  /* Estados clinicos */
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-bg: #dcfce7;
+  --warning: #c2410c;
+  --warning-foreground: #ffffff;
+  --warning-bg: #ffedd5;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+  --destructive-bg: #fee2e2;
+
+  /* Prioridad de triaje */
+  --triage-rojo: #dc2626;
+  --triage-naranja: #ea580c;
+  --triage-amarillo: #ca8a04;
+  --triage-verde: #16a34a;
+
+  --border: #e2e8f0;
   --input: transparent;
-  --input-background: #f3f3f5;
+  --input-background: #f8fafc;
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --ring: #059669;
+
+  --chart-1: #059669;
+  --chart-2: #1d4ed8;
+  --chart-3: #c2410c;
+  --chart-4: #7c3aed;
+  --chart-5: #dc2626;
+
+  --radius: 0.75rem;
+
+  /* Sidebar: navy institucional */
+  --sidebar: #0b132b;
+  --sidebar-foreground: #e2eaf6;
+  --sidebar-primary: #059669;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #059669;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --card-foreground: #e2e8f0;
+  --popover: #111827;
+  --popover-foreground: #e2e8f0;
+  --primary: #10b981;
+  --primary-foreground: #04342c;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #134e3f;
+  --accent-foreground: #9fe1cb;
+  --success: #4ade80;
+  --success-foreground: #04342c;
+  --warning: #fb923c;
+  --warning-foreground: #431407;
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #10b981;
+  --chart-1: #10b981;
+  --chart-2: #3b82f6;
+  --chart-3: #fb923c;
+  --chart-4: #a78bfa;
+  --chart-5: #f87171;
+  --sidebar: #0b132b;
+  --sidebar-foreground: #e2eaf6;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #04342c;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #10b981;
 }
 
 @theme inline {
@@ -93,8 +118,19 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-bg: var(--warning-bg);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-bg: var(--destructive-bg);
+  --color-triage-rojo: var(--triage-rojo);
+  --color-triage-naranja: var(--triage-naranja);
+  --color-triage-amarillo: var(--triage-amarillo);
+  --color-triage-verde: var(--triage-verde);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-input-background: var(--input-background);
@@ -128,11 +164,6 @@
     @apply bg-background text-foreground;
   }
 
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
-
   html {
     font-size: var(--font-size);
   }
@@ -161,12 +192,7 @@
     line-height: 1.5;
   }
 
-  label {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
+  label,
   button {
     font-size: var(--text-base);
     font-weight: var(--font-weight-medium);
@@ -178,4 +204,12 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+}
+/* Apariencia sobria para el área administrativa; el acceso conserva su diseño. */
+.clinic-shell :where(.rounded-xl, .rounded-2xl, .rounded-3xl) {
+  border-radius: 0.375rem;
+}
+
+.clinic-shell :where(.shadow-sm, .shadow-lg) {
+  box-shadow: none;
 }

@@ -1,7 +1,7 @@
 const pool = require("../../config/db");
 
 async function getResumen() {
-  const [countsResult, estadosResult] = await Promise.all([
+  const [countsResult, estadosResult, tendenciaResult] = await Promise.all([
     pool.query(`
       SELECT
         (SELECT COUNT(*)::int FROM pacientes) AS total_pacientes,
@@ -18,11 +18,26 @@ async function getResumen() {
       GROUP BY estado
       ORDER BY estado
     `),
+    pool.query(`
+      WITH meses AS (
+        SELECT generate_series(
+          date_trunc('month', NOW() AT TIME ZONE 'America/Guatemala') - INTERVAL '5 months',
+          date_trunc('month', NOW() AT TIME ZONE 'America/Guatemala'),
+          INTERVAL '1 month'
+        ) AS mes
+      )
+      SELECT to_char(m.mes, 'YYYY-MM') AS mes, COUNT(c.id_cita)::int AS citas
+      FROM meses m
+      LEFT JOIN citas c ON c.fecha_hora >= m.mes AT TIME ZONE 'America/Guatemala'
+        AND c.fecha_hora < (m.mes + INTERVAL '1 month') AT TIME ZONE 'America/Guatemala'
+      GROUP BY m.mes ORDER BY m.mes
+    `),
   ]);
 
   return {
     ...countsResult.rows[0],
     citas_por_estado: estadosResult.rows,
+    citas_por_mes: tendenciaResult.rows,
   };
 }
 

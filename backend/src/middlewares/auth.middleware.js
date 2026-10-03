@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const pool = require("../config/db");
 
 function getJwtSecret() {
   if (!process.env.JWT_SECRET) {
@@ -8,7 +9,7 @@ function getJwtSecret() {
   return process.env.JWT_SECRET;
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "No autenticado. Se requiere token." });
@@ -16,9 +17,9 @@ function requireAuth(req, res, next) {
 
   const token = authHeader.slice(7);
 
+  let payload;
   try {
-    req.usuario = jwt.verify(token, getJwtSecret());
-    return next();
+    payload = jwt.verify(token, getJwtSecret());
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
@@ -27,6 +28,27 @@ function requireAuth(req, res, next) {
     }
 
     return res.status(401).json({ message: "Token invalido." });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id_usuario, nombre, email, rol, id_medico, activo
+       FROM usuarios
+       WHERE id_usuario = $1`,
+      [payload.id_usuario]
+    );
+    const usuario = result.rows[0];
+
+    if (!usuario || !usuario.activo) {
+      return res.status(401).json({
+        message: "La cuenta no existe o fue desactivada.",
+      });
+    }
+
+    req.usuario = usuario;
+    return next();
+  } catch (error) {
+    return next(error);
   }
 }
 

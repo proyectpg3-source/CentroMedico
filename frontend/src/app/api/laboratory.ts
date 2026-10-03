@@ -55,6 +55,44 @@ export interface LabResultRecord {
   medico_nombre: string | null;
 }
 
+export interface LabSupplyRecord {
+  id_insumo: number;
+  nombre: string;
+  categoria: string;
+  unidad: string;
+  stock: number;
+  stock_minimo: number;
+  fecha_vencimiento: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LabSupplyAlert {
+  key: string;
+  itemId: string;
+  type: "stock" | "expiration";
+  level: "low" | "expired" | "expiring";
+  name: string;
+  badge: string;
+  detail: string;
+  recommendation: string;
+}
+
+export interface LabSupplyAlertsResponse {
+  source: string;
+  generatedAt: string;
+  serviceWarning?: string;
+  summary: {
+    totalItems: number;
+    totalAlerts: number;
+    lowStock: number;
+    outOfStock: number;
+    expired: number;
+    expiringSoon: number;
+  };
+  alerts: LabSupplyAlert[];
+}
+
 export interface LabOrderPayload {
   id_paciente?: number | null;
   id_cita?: number | null;
@@ -73,6 +111,34 @@ export interface LabResultPayload {
   validado_por?: string | null;
 }
 
+export interface LabSupplyPayload {
+  nombre: string;
+  categoria?: string;
+  unidad?: string;
+  stock?: number;
+  stock_minimo?: number;
+  fecha_vencimiento?: string | null;
+}
+
+export interface LabSupplyMovementPayload {
+  tipo: "entrada" | "salida";
+  cantidad: number;
+  motivo?: string | null;
+}
+
+export interface LabSupplyMovementResponse {
+  insumo: LabSupplyRecord;
+  movimiento: {
+    id_movimiento: number;
+    id_insumo: number;
+    tipo: "entrada" | "salida";
+    cantidad: number;
+    motivo: string | null;
+    id_usuario: number | null;
+    created_at: string;
+  };
+}
+
 export interface FetchLabOrdersParams {
   q?: string;
   id_paciente?: number | string;
@@ -86,6 +152,10 @@ export interface FetchLabResultsParams {
   id_paciente?: number | string;
   id_visita?: number | string;
   id_orden?: number | string;
+}
+
+export interface FetchLabSuppliesParams {
+  q?: string;
 }
 
 function buildQuery(params?: Record<string, string | number | undefined | null>) {
@@ -145,6 +215,57 @@ export function updateLabOrderStatus(id: number, estado: LaboratoryOrderStatus) 
       body: JSON.stringify({ estado }),
     },
     "No se pudo actualizar el estado de la orden."
+  );
+}
+
+export async function fetchLabSupplies(params?: FetchLabSuppliesParams, signal?: AbortSignal) {
+  const response = await request<LabSupplyRecord[] | PaginatedResponse<LabSupplyRecord>>(
+    `/api/laboratorio/insumos${buildQuery(params)}`,
+    { method: "GET", signal },
+    "No se pudieron obtener los insumos de laboratorio."
+  );
+
+  return unwrapList(response);
+}
+
+export function fetchLabSupplyAlerts(signal?: AbortSignal) {
+  return request<LabSupplyAlertsResponse>(
+    "/api/laboratorio/insumos/alertas",
+    { method: "GET", signal },
+    "No se pudieron obtener las alertas de insumos."
+  );
+}
+
+export function createLabSupply(payload: LabSupplyPayload) {
+  return request<LabSupplyRecord>(
+    "/api/laboratorio/insumos",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    "No se pudo crear el insumo de laboratorio."
+  );
+}
+
+export function updateLabSupply(id: number, payload: LabSupplyPayload) {
+  return request<LabSupplyRecord>(
+    `/api/laboratorio/insumos/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    },
+    "No se pudo actualizar el insumo de laboratorio."
+  );
+}
+
+export function registerLabSupplyMovement(id: number, payload: LabSupplyMovementPayload) {
+  return request<LabSupplyMovementResponse>(
+    `/api/laboratorio/insumos/${id}/movimientos`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    "No se pudo registrar el movimiento del insumo."
   );
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import {
   createAppointment,
   fetchAppointments,
@@ -875,33 +876,39 @@ function AppointmentCard({
         )}
 
         {canCreateOrder && (
-          <button
-            type="button"
-            onClick={() => onOpenOrder(appointment)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-100"
-          >
-            <FlaskConical className="h-4 w-4" />
-            Orden laboratorio
-          </button>
+          <Can module="laboratory" action="create">
+            <button
+              type="button"
+              onClick={() => onOpenOrder(appointment)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-100"
+            >
+              <FlaskConical className="h-4 w-4" />
+              Orden laboratorio
+            </button>
+          </Can>
         )}
 
-        <button
-          type="button"
-          onClick={() => onEdit(appointment)}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-        >
-          <PencilLine className="h-4 w-4" />
-          Editar
-        </button>
+        <Can module="appointments" action="edit">
+          <button
+            type="button"
+            onClick={() => onEdit(appointment)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <PencilLine className="h-4 w-4" />
+            Editar
+          </button>
+        </Can>
 
-        <button
-          type="button"
-          onClick={() => onDelete(appointment)}
-          className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100"
-        >
-          <Trash2 className="h-4 w-4" />
-          Eliminar
-        </button>
+        <Can module="appointments" action="delete">
+          <button
+            type="button"
+            onClick={() => onDelete(appointment)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100"
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+          </button>
+        </Can>
       </div>
     </article>
   );
@@ -1224,18 +1231,20 @@ export default function Appointments() {
                 Filtra la agenda, ajusta estados y abre el flujo clinico sin salir de esta vista
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitError(null);
-                setAppointmentForm({ mode: "create", appointment: null });
-              }}
-              disabled={patients.length === 0 || doctors.length === 0}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <CalendarDays className="h-4 w-4" />
-              Nueva cita
-            </button>
+            <Can module="appointments" action="create">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitError(null);
+                  setAppointmentForm({ mode: "create", appointment: null });
+                }}
+                disabled={patients.length === 0 || doctors.length === 0}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Nueva cita
+              </button>
+            </Can>
           </div>
 
           <div className="mt-5 flex flex-col gap-3 xl:flex-row">

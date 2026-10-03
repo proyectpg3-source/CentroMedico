@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import {
   createPayment,
   fetchCharges,
@@ -463,18 +464,20 @@ export default function Billing() {
                   </div>
 
                   <div className="mt-5 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSubmitError(null);
-                        setSelectedCharge(charge);
-                      }}
-                      disabled={numericValue(charge.saldo) <= 0}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Registrar pago
-                    </button>
+                    <Can module="billing" action="create">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSubmitError(null);
+                          setSelectedCharge(charge);
+                        }}
+                        disabled={numericValue(charge.saldo) <= 0}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Registrar pago
+                      </button>
+                    </Can>
                     <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700">
                       <Wallet className="h-4 w-4" />
                       Referencia {charge.referencia_tipo} #{charge.referencia_id}

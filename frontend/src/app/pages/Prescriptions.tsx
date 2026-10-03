@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import {
   createPrescription,
   fetchPrescriptions,
@@ -381,17 +382,19 @@ export default function Prescriptions() {
                 Listado de farmacos indicados, frecuencia y costo por visita
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitError(null);
-                setShowCreateModal(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-            >
-              <FilePlus2 className="h-4 w-4" />
-              Nueva prescripcion
-            </button>
+            <Can module="prescriptions" action="create">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitError(null);
+                  setShowCreateModal(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              >
+                <FilePlus2 className="h-4 w-4" />
+                Nueva prescripcion
+              </button>
+            </Can>
           </div>
 
           <div className="mt-5 relative">

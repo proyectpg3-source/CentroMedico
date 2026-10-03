@@ -7,6 +7,7 @@ const { ensureSchema } = require("../schema");
 const pool = require("./config/db");
 const errorHandler = require("./middlewares/errorHandler");
 const schemaReadyMiddleware = require("./middlewares/schemaReady");
+const { getMicroserviceHealth } = require("./services/microservices");
 
 // Rutas
 const authRoutes = require("./modules/auth/auth.routes");
@@ -21,6 +22,8 @@ const cargosRoutes = require("./modules/cargos/cargos.routes");
 const pagosRoutes = require("./modules/pagos/pagos.routes");
 const analisisRoutes = require("./modules/analisis/analisis.routes");
 const triajesRoutes = require("./modules/triajes/triajes.routes");
+const backupsRoutes = require("./modules/backups/backups.routes");
+const auditoriaRoutes = require("./modules/auditoria/auditoria.routes");
 
 const app = express();
 
@@ -31,6 +34,7 @@ const CORS_ORIGINS = String(process.env.CORS_ORIGIN || "")
 
 app.disable("x-powered-by");
 app.use(cors({ origin: CORS_ORIGINS.length ? CORS_ORIGINS : true }));
+app.use('/api/documentos', express.json({ limit: '7mb' }));
 app.use(express.json());
 
 // Esperar a que el schema esté listo antes de servir requests
@@ -43,11 +47,15 @@ app.get("/", (req, res) => {
     message: "Servidor del Centro Medico activo.",
     endpoints: [
       "/api/health",
+      "/api/microservices/health",
       "/api/dashboard/resumen",
       "/api/pacientes",
       "/api/medicos",
       "/api/citas",
       "/api/visitas",
+      "/api/laboratorio/insumos",
+      "/api/laboratorio/insumos/alertas",
+      "/api/laboratorio/insumos/:id/movimientos",
       "/api/laboratorio/ordenes",
       "/api/laboratorio/resultados",
       "/api/prescripciones",
@@ -56,6 +64,8 @@ app.get("/", (req, res) => {
       "/api/analisis/priorizacion",
       "/api/analisis/indicadores",
       "/api/triajes",
+      "/api/backups/export",
+      "/api/auditoria",
     ],
   });
 });
@@ -66,6 +76,14 @@ app.get("/api/health", async (req, res) => {
     res.json({ status: "ok", database: "connected" });
   } catch {
     res.status(500).json({ status: "error", database: "disconnected" });
+  }
+});
+
+app.get("/api/microservices/health", async (req, res, next) => {
+  try {
+    res.json(await getMicroserviceHealth());
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -81,7 +99,11 @@ app.use("/api/cargos", cargosRoutes);
 app.use("/api/pagos", pagosRoutes);
 app.use("/api/analisis", analisisRoutes);
 app.use("/api/triajes", triajesRoutes);
+app.use("/api/backups", backupsRoutes);
+app.use("/api/auditoria", auditoriaRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/productos", require("./modules/productos/productos.routes"));
+app.use("/api/documentos", require("./modules/documentos/documentos.routes"));
 // 404
 app.use((req, res) => {
   res.status(404).json({ message: "Ruta no encontrada." });

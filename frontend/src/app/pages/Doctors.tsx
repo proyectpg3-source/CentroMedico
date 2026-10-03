@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import {
   createDoctor,
   fetchDoctors,
@@ -173,13 +174,15 @@ function DoctorModal({
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button
-              onClick={onEdit}
-              className="flex-1 flex items-center justify-center gap-2 py-2 text-sm bg-[#2563eb] text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-              Editar medico
-            </button>
+            <Can module="doctors" action="edit">
+              <button
+                onClick={onEdit}
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm bg-[#2563eb] text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+                Editar medico
+              </button>
+            </Can>
             <button
               onClick={onClose}
               className="flex-1 flex items-center justify-center gap-2 py-2 text-sm border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -556,16 +559,18 @@ export default function Doctors() {
             ))}
           </select>
 
-          <button
-            onClick={() => {
-              setSubmitError(null);
-              setDoctorForm({ mode: "create", doctor: null });
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700 transition-colors ml-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Medico
-          </button>
+          <Can module="doctors" action="create">
+            <button
+              onClick={() => {
+                setSubmitError(null);
+                setDoctorForm({ mode: "create", doctor: null });
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700 transition-colors ml-auto"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Medico
+            </button>
+          </Can>
         </div>
 
         {loading ? (
@@ -594,25 +599,29 @@ export default function Doctors() {
                       </div>
                     </div>
                     <div className="flex gap-2 pt-8">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSubmitError(null);
-                          setDoctorForm({ mode: "edit", doctor });
-                        }}
-                        className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center justify-center"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setDoctorToDelete(doctor);
-                        }}
-                        className="w-8 h-8 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center justify-center"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <Can module="doctors" action="edit">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSubmitError(null);
+                            setDoctorForm({ mode: "edit", doctor });
+                          }}
+                          className="w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </Can>
+                      <Can module="doctors" action="delete">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDoctorToDelete(doctor);
+                          }}
+                          className="w-8 h-8 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center justify-center"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </Can>
                     </div>
                   </div>
 

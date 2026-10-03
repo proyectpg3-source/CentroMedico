@@ -103,6 +103,11 @@ const SCHEMA_STATEMENTS = [
     ON citas(estado, puntaje_prioridad DESC, fecha_hora ASC);
   `,
   `
+    CREATE UNIQUE INDEX IF NOT EXISTS citas_medico_fecha_activa_key
+    ON citas(id_medico, fecha_hora)
+    WHERE estado NOT IN ('cancelada');
+  `,
+  `
     CREATE TABLE IF NOT EXISTS triajes (
       id_triaje SERIAL PRIMARY KEY,
       id_cita INTEGER NOT NULL UNIQUE REFERENCES citas(id_cita) ON DELETE CASCADE,
@@ -274,6 +279,27 @@ const SCHEMA_STATEMENTS = [
     ON ordenes_laboratorio(id_cita);
   `,
   `
+    CREATE TABLE IF NOT EXISTS insumos_laboratorio (
+      id_insumo SERIAL PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      categoria TEXT NOT NULL DEFAULT 'Laboratorio',
+      unidad TEXT NOT NULL DEFAULT 'unidad',
+      stock INTEGER NOT NULL DEFAULT 0,
+      stock_minimo INTEGER NOT NULL DEFAULT 0,
+      fecha_vencimiento DATE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS idx_insumos_laboratorio_stock
+    ON insumos_laboratorio(stock, stock_minimo);
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS idx_insumos_laboratorio_vencimiento
+    ON insumos_laboratorio(fecha_vencimiento);
+  `,
+  `
     CREATE TABLE IF NOT EXISTS resultados_laboratorio (
       id_resultado SERIAL PRIMARY KEY,
       id_orden INTEGER NOT NULL UNIQUE REFERENCES ordenes_laboratorio(id_orden) ON DELETE CASCADE,
@@ -365,7 +391,70 @@ const SCHEMA_STATEMENTS = [
     CREATE UNIQUE INDEX IF NOT EXISTS usuarios_id_medico_key
     ON usuarios(id_medico) WHERE id_medico IS NOT NULL;
   `,
+  `
+    CREATE TABLE IF NOT EXISTS movimientos_insumos_laboratorio (
+      id_movimiento SERIAL PRIMARY KEY,
+      id_insumo INTEGER NOT NULL REFERENCES insumos_laboratorio(id_insumo) ON DELETE CASCADE,
+      tipo TEXT NOT NULL CHECK (tipo IN ('entrada', 'salida')),
+      cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+      motivo TEXT,
+      id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS idx_movimientos_insumos_insumo
+    ON movimientos_insumos_laboratorio(id_insumo, created_at DESC);
+  `,
+  `
+    CREATE TABLE IF NOT EXISTS eventos_auditoria (
+      id_evento SERIAL PRIMARY KEY,
+      id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+      accion TEXT NOT NULL,
+      entidad TEXT NOT NULL,
+      id_entidad TEXT,
+      descripcion TEXT,
+      metadata JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `,
+  `
+    CREATE INDEX IF NOT EXISTS idx_eventos_auditoria_created
+    ON eventos_auditoria(created_at DESC);
+  `,
 
+  `CREATE TABLE IF NOT EXISTS productos (
+    id SERIAL PRIMARY KEY,
+    tipo TEXT NOT NULL CHECK (tipo IN ('inventario','farmacia')),
+    codigo TEXT NOT NULL UNIQUE,
+    nombre TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    unidad TEXT NOT NULL,
+    proveedor TEXT NOT NULL DEFAULT '',
+    stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+    minimo INTEGER NOT NULL DEFAULT 0 CHECK (minimo >= 0),
+    precio NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (precio >= 0),
+    vencimiento DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`,
+  `CREATE TABLE IF NOT EXISTS movimientos_productos (
+    id SERIAL PRIMARY KEY,
+    id_producto INTEGER NOT NULL REFERENCES productos(id),
+    cantidad INTEGER NOT NULL CHECK (cantidad <> 0),
+    motivo TEXT NOT NULL,
+    id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`,
+  `CREATE TABLE IF NOT EXISTS documentos_paciente (
+    id SERIAL PRIMARY KEY,
+    id_paciente INTEGER NOT NULL REFERENCES pacientes(id_paciente) ON DELETE RESTRICT,
+    nombre TEXT NOT NULL,
+    descripcion TEXT NOT NULL DEFAULT '',
+    tipo TEXT NOT NULL,
+    contenido BYTEA NOT NULL,
+    id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`,
 ];
 
 async function ensureSchema(pool) {

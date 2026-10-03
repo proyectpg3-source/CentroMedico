@@ -14,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import {
   fetchAnalysisIndicators,
   fetchPriorityQueue,
@@ -26,7 +27,7 @@ import {
 } from "../api/analysis";
 import { fetchPatients, type PatientRecord } from "../api/patients";
 import { updateAppointmentStatus, type AppointmentStatus } from "../api/appointments";
-import { formatDate, formatDateTime, getErrorMessage } from "../lib/format";
+import { formatDate, formatDateTime, formatDuration, getErrorMessage } from "../lib/format";
 
 const priorityMeta: Record<
   ClinicalPriority,
@@ -213,7 +214,7 @@ export default function Prioritization() {
     },
     {
       label: "Espera promedio",
-      value: `${indicators?.espera_promedio_minutos ?? 0} min`,
+      value: formatDuration(indicators?.espera_promedio_minutos),
       icon: Clock3,
       tone: "bg-amber-50 text-amber-600",
     },
@@ -279,19 +280,21 @@ export default function Prioritization() {
                     Orden sugerido segun sintomas, historial y espera registrada
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void handleRecalculate()}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCcw className="h-4 w-4" />
-                  )}
-                  Recalcular
-                </button>
+                <Can module="prioritization" action="edit">
+                  <button
+                    type="button"
+                    onClick={() => void handleRecalculate()}
+                    disabled={actionLoading}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCcw className="h-4 w-4" />
+                    )}
+                    Recalcular
+                  </button>
+                </Can>
               </div>
 
               <div className="relative mt-5">
@@ -362,7 +365,7 @@ export default function Prioritization() {
                         </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-2">
                           <p className="text-xs text-slate-400">Espera</p>
-                          <p className="mt-1 font-medium text-slate-700">{appointment.minutos_espera} min</p>
+                          <p className="mt-1 font-medium text-slate-700">{formatDuration(appointment.minutos_espera)}</p>
                         </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-2">
                           <p className="text-xs text-slate-400">Contacto</p>
@@ -393,34 +396,36 @@ export default function Prioritization() {
                       <p className="text-xs text-slate-400">
                         Ultima visita: {appointment.ultima_visita ? formatDateTime(appointment.ultima_visita) : "sin historial"}
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        <select
-                          value={appointment.estado as AppointmentStatus}
-                          disabled={statusUpdatingId === appointment.id_cita}
-                          onChange={(event) =>
-                            void handleStatusChange(
-                              appointment.id_cita,
-                              event.target.value as AppointmentStatus
-                            )
-                          }
-                          className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
-                        >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status.replace("_", " ")}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => void handleStatusChange(appointment.id_cita, "en_curso")}
-                          disabled={statusUpdatingId === appointment.id_cita || appointment.estado === "en_curso"}
-                          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <PlayCircle className="h-4 w-4" />
-                          Atender
-                        </button>
-                      </div>
+                      <Can module="prioritization" action="edit">
+                        <div className="flex flex-wrap gap-2">
+                          <select
+                            value={appointment.estado as AppointmentStatus}
+                            disabled={statusUpdatingId === appointment.id_cita}
+                            onChange={(event) =>
+                              void handleStatusChange(
+                                appointment.id_cita,
+                                event.target.value as AppointmentStatus
+                              )
+                            }
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
+                          >
+                            {statusOptions.map((status) => (
+                              <option key={status} value={status}>
+                                {status.replace("_", " ")}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => void handleStatusChange(appointment.id_cita, "en_curso")}
+                            disabled={statusUpdatingId === appointment.id_cita || appointment.estado === "en_curso"}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <PlayCircle className="h-4 w-4" />
+                            Atender
+                          </button>
+                        </div>
+                      </Can>
                     </div>
                   </article>
                 );

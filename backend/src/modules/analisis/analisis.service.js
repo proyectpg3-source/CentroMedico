@@ -1,4 +1,5 @@
 const pool = require("../../config/db");
+const { assessTriagePriority } = require("../../services/microservices");
 
 const URGENT_KEYWORDS = [
   "dificultad respiratoria",
@@ -177,9 +178,53 @@ async function getPatientHistory(idPaciente, queryRunner = pool) {
   return result.rows;
 }
 
+async function getPatientBirthDate(idPaciente, queryRunner = pool) {
+  const result = await queryRunner.query(
+    "SELECT fecha_nacimiento FROM pacientes WHERE id_paciente = $1",
+    [idPaciente]
+  );
+  return result.rows[0]?.fecha_nacimiento || null;
+}
+
+async function calcularPrioridadDesdeEntrada(input) {
+  const localPriority = calculatePriority(input);
+
+  try {
+    const servicePriority = await assessTriagePriority(input);
+    return servicePriority || {
+      ...localPriority,
+      fuente_prioridad: "fallback-local",
+    };
+  } catch (error) {
+    return {
+      ...localPriority,
+      fuente_prioridad: "fallback-local",
+      advertencia_microservicio: error.message,
+    };
+  }
+}
+
 async function calcularPrioridadParaPaciente(idPaciente, input, queryRunner = pool) {
   const history = await getPatientHistory(idPaciente, queryRunner);
-  return calculatePriority(input, history);
+  const fechaNacimiento = await getPatientBirthDate(idPaciente, queryRunner);
+  const localPriority = calculatePriority(input, history);
+
+  try {
+    const servicePriority = await assessTriagePriority({
+      ...input,
+      fecha_nacimiento: fechaNacimiento,
+    });
+    return servicePriority || {
+      ...localPriority,
+      fuente_prioridad: "fallback-local",
+    };
+  } catch (error) {
+    return {
+      ...localPriority,
+      fuente_prioridad: "fallback-local",
+      advertencia_microservicio: error.message,
+    };
+  }
 }
 
 async function aplicarPrioridadACita(idCita, queryRunner = pool) {
@@ -355,6 +400,7 @@ async function getIndicadores() {
 
 module.exports = {
   calculatePriority,
+  calcularPrioridadDesdeEntrada,
   calcularPrioridadParaPaciente,
   aplicarPrioridadACita,
   recalcularCitasAbiertas,

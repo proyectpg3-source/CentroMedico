@@ -4,6 +4,7 @@ export interface DashboardSummaryRecord {
   total_pacientes: number;
   total_medicos: number;
   total_citas: number;
+  citas_por_mes: Array<{ mes: string; citas: number }>;
   citas_por_estado: Array<{
     estado: string;
     total: number;

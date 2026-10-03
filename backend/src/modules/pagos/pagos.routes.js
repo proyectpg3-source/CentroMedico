@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const pool = require("../../config/db");
 const {
   getTrimmedString, getOptionalString, getOptionalId, isValidDateTime,
@@ -35,6 +36,8 @@ async function getPaymentById(id, queryRunner = pool) {
 }
 
 const router = express.Router();
+router.use(requireAuth);
+router.use(requireRole("admin", "recepcionista", "fundacion"));
 
 router.get("/", async (req, res) => {
   try {

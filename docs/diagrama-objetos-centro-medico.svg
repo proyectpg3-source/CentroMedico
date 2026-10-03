@@ -1,0 +1,229 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1500" viewBox="0 0 1320 1500">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4A5568" fill-opacity="0.72"/>
+    </marker>
+    <style>
+      .title {
+        font: 700 34px Arial, Helvetica, sans-serif;
+        fill: #111827;
+      }
+      .subtitle {
+        font: 500 18px Arial, Helvetica, sans-serif;
+        fill: #374151;
+      }
+      .object-title {
+        font: 700 17px Arial, Helvetica, sans-serif;
+        fill: #111827;
+        text-decoration: underline;
+      }
+      .object-attr {
+        font: 14px Consolas, "Courier New", monospace;
+        fill: #1F2937;
+      }
+      .link-label {
+        font: 700 13px Arial, Helvetica, sans-serif;
+        fill: #111827;
+        paint-order: stroke;
+        stroke: rgba(255, 255, 255, 0.84);
+        stroke-width: 5px;
+        stroke-linejoin: round;
+      }
+    </style>
+  </defs>
+
+  <text x="70" y="38" class="title">Diagrama de objetos - Centro Medico La Aurora</text>
+  <text x="70" y="62" class="subtitle">Instancias de ejemplo del flujo clinico, laboratorio, cobros, inventario y auditoria. Fondo transparente.</text>
+
+  <g class="link">
+  <line x1="217.5" y1="142.5" x2="400" y2="377.5" stroke="#4A5568" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="308.8" y="252" class="link-label">agenda</text>
+</g>
+<g class="link">
+  <line x1="612.5" y1="142.5" x2="400" y2="377.5" stroke="#4A5568" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="506.2" y="252" class="link-label">atiende</text>
+</g>
+<g class="link">
+  <line x1="1010" y1="142.5" x2="612.5" y2="142.5" stroke="#7353BA" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="811.2" y="134.5" class="link-label">perfil clinico</text>
+</g>
+<g class="link">
+  <line x1="400" y1="377.5" x2="197.5" y2="640" stroke="#C53030" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="298.8" y="500.8" class="link-label">tiene</text>
+</g>
+<g class="link">
+  <line x1="400" y1="377.5" x2="640" y2="650" stroke="#0E7490" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="520" y="505.8" class="link-label">genera</text>
+</g>
+<g class="link">
+  <line x1="1010" y1="142.5" x2="1065" y2="637.5" stroke="#8B5E34" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="1037.5" y="382" class="link-label">registra</text>
+</g>
+<g class="link">
+  <line x1="640" y1="650" x2="1065" y2="637.5" stroke="#8B5E34" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="852.5" y="635.8" class="link-label">queda auditada</text>
+</g>
+<g class="link">
+  <line x1="640" y1="650" x2="217.5" y2="910" stroke="#2F855A" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="428.8" y="772" class="link-label">solicita</text>
+</g>
+<g class="link">
+  <line x1="217.5" y1="910" x2="227.5" y2="1157.5" stroke="#0F766E" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="222.5" y="1025.8" class="link-label">produce</text>
+</g>
+<g class="link">
+  <line x1="640" y1="650" x2="655" y2="910" stroke="#B83280" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="647.5" y="772" class="link-label">indica</text>
+</g>
+<g class="link">
+  <line x1="640" y1="650" x2="1080" y2="910" stroke="#4A5568" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="860" y="772" class="link-label">cobra</text>
+</g>
+<g class="link">
+  <line x1="1080" y1="910" x2="1087.5" y2="1157.5" stroke="#276749" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="1083.8" y="1025.8" class="link-label">liquida</text>
+</g>
+<g class="link">
+  <line x1="217.5" y1="910" x2="645" y2="1157.5" stroke="#315A9B" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="431.2" y="1025.8" class="link-label">usa control de stock</text>
+</g>
+<g class="link">
+  <line x1="645" y1="1157.5" x2="645" y2="1367.5" stroke="#9A6B12" stroke-width="2" stroke-opacity="0.72" marker-end="url(#arrow)"/>
+  <text x="645" y="1254.5" class="link-label">historial</text>
+</g>
+
+  <g id="paciente">
+  <rect x="70" y="70" width="295" height="145" rx="8" fill="#EAF7F2" fill-opacity="0.82" stroke="#128466" stroke-width="2.4"/>
+  <line x1="70" y1="108" x2="365" y2="108" stroke="#128466" stroke-width="1.5" opacity="0.72"/>
+  <text x="84" y="95" class="object-title">pacienteJuan : Paciente</text>
+  <text x="84" y="132" class="object-attr">id_paciente = 1</text>
+  <text x="84" y="154" class="object-attr">nombre = Juan Perez</text>
+  <text x="84" y="176" class="object-attr">dni = 10000001</text>
+  <text x="84" y="198" class="object-attr">telefono = 55510001</text>
+</g>
+<g id="medico">
+  <rect x="455" y="70" width="315" height="145" rx="8" fill="#EBF2FF" fill-opacity="0.82" stroke="#2B6CB0" stroke-width="2.4"/>
+  <line x1="455" y1="108" x2="770" y2="108" stroke="#2B6CB0" stroke-width="1.5" opacity="0.72"/>
+  <text x="469" y="95" class="object-title">medicoMaria : Medico</text>
+  <text x="469" y="132" class="object-attr">id_medico = 1</text>
+  <text x="469" y="154" class="object-attr">nombre = Dra. Maria Gonzalez</text>
+  <text x="469" y="176" class="object-attr">especialidad = Cardiologia</text>
+  <text x="469" y="198" class="object-attr">licencia = MED-CAR-001</text>
+</g>
+<g id="usuario">
+  <rect x="860" y="70" width="300" height="145" rx="8" fill="#F3EEFF" fill-opacity="0.82" stroke="#7353BA" stroke-width="2.4"/>
+  <line x1="860" y1="108" x2="1160" y2="108" stroke="#7353BA" stroke-width="1.5" opacity="0.72"/>
+  <text x="874" y="95" class="object-title">usuarioClinico : Usuario</text>
+  <text x="874" y="132" class="object-attr">id_usuario = 1</text>
+  <text x="874" y="154" class="object-attr">rol = medico</text>
+  <text x="874" y="176" class="object-attr">activo = true</text>
+  <text x="874" y="198" class="object-attr">id_medico = 1</text>
+</g>
+<g id="cita">
+  <rect x="235" y="295" width="330" height="165" rx="8" fill="#FFF7E8" fill-opacity="0.82" stroke="#B7791F" stroke-width="2.4"/>
+  <line x1="235" y1="333" x2="565" y2="333" stroke="#B7791F" stroke-width="1.5" opacity="0.72"/>
+  <text x="249" y="320" class="object-title">citaControl : Cita</text>
+  <text x="249" y="357" class="object-attr">id_cita = 1</text>
+  <text x="249" y="379" class="object-attr">motivo = Control de presion arterial</text>
+  <text x="249" y="401" class="object-attr">estado = completada</text>
+  <text x="249" y="423" class="object-attr">prioridad_clinica = media</text>
+  <text x="249" y="445" class="object-attr">puntaje_prioridad = 34</text>
+</g>
+<g id="triaje">
+  <rect x="30" y="555" width="335" height="170" rx="8" fill="#FFEDEE" fill-opacity="0.82" stroke="#C53030" stroke-width="2.4"/>
+  <line x1="30" y1="593" x2="365" y2="593" stroke="#C53030" stroke-width="1.5" opacity="0.72"/>
+  <text x="44" y="580" class="object-title">triajeControl : Triaje</text>
+  <text x="44" y="617" class="object-attr">id_triaje = 1</text>
+  <text x="44" y="639" class="object-attr">motivo_consulta = Control PA</text>
+  <text x="44" y="661" class="object-attr">presion_arterial = en observacion</text>
+  <text x="44" y="683" class="object-attr">prioridad_clinica = media</text>
+  <text x="44" y="705" class="object-attr">puntaje_prioridad = 34</text>
+</g>
+<g id="visita">
+  <rect x="450" y="555" width="380" height="190" rx="8" fill="#ECFEFF" fill-opacity="0.82" stroke="#0E7490" stroke-width="2.4"/>
+  <line x1="450" y1="593" x2="830" y2="593" stroke="#0E7490" stroke-width="1.5" opacity="0.72"/>
+  <text x="464" y="580" class="object-title">visitaControl : VisitaMedica</text>
+  <text x="464" y="617" class="object-attr">id_visita = 1</text>
+  <text x="464" y="639" class="object-attr">diagnostico = Hipertension controlada</text>
+  <text x="464" y="661" class="object-attr">tratamiento = Losartan + dieta</text>
+  <text x="464" y="683" class="object-attr">costo_consulta = 350.00</text>
+  <text x="464" y="705" class="object-attr">estado origen = cita completada</text>
+</g>
+<g id="auditoria">
+  <rect x="905" y="555" width="320" height="165" rx="8" fill="#F8F5EF" fill-opacity="0.82" stroke="#8B5E34" stroke-width="2.4"/>
+  <line x1="905" y1="593" x2="1225" y2="593" stroke="#8B5E34" stroke-width="1.5" opacity="0.72"/>
+  <text x="919" y="580" class="object-title">eventoVisita : EventoAuditoria</text>
+  <text x="919" y="617" class="object-attr">id_evento = 1</text>
+  <text x="919" y="639" class="object-attr">accion = CREATE</text>
+  <text x="919" y="661" class="object-attr">entidad = visitas_medicas</text>
+  <text x="919" y="683" class="object-attr">id_entidad = 1</text>
+  <text x="919" y="705" class="object-attr">metadata = JSONB</text>
+</g>
+<g id="orden">
+  <rect x="40" y="825" width="355" height="170" rx="8" fill="#EFFFF4" fill-opacity="0.82" stroke="#2F855A" stroke-width="2.4"/>
+  <line x1="40" y1="863" x2="395" y2="863" stroke="#2F855A" stroke-width="1.5" opacity="0.72"/>
+  <text x="54" y="850" class="object-title">ordenQuimica : OrdenLaboratorio</text>
+  <text x="54" y="887" class="object-attr">id_orden = 1</text>
+  <text x="54" y="909" class="object-attr">examen = Quimica sanguinea</text>
+  <text x="54" y="931" class="object-attr">prioridad = alta</text>
+  <text x="54" y="953" class="object-attr">estado = validado</text>
+  <text x="54" y="975" class="object-attr">costo = 420.00</text>
+</g>
+<g id="resultado">
+  <rect x="60" y="1080" width="335" height="155" rx="8" fill="#F0FDFA" fill-opacity="0.82" stroke="#0F766E" stroke-width="2.4"/>
+  <line x1="60" y1="1118" x2="395" y2="1118" stroke="#0F766E" stroke-width="1.5" opacity="0.72"/>
+  <text x="74" y="1105" class="object-title">resultadoQuimica : ResultadoLaboratorio</text>
+  <text x="74" y="1142" class="object-attr">id_resultado = 1</text>
+  <text x="74" y="1164" class="object-attr">resultado = parametros en rango</text>
+  <text x="74" y="1186" class="object-attr">validado_por = Dra. Maria Gonzalez</text>
+  <text x="74" y="1208" class="object-attr">fecha_resultado = ahora</text>
+</g>
+<g id="prescripcion">
+  <rect x="485" y="825" width="340" height="170" rx="8" fill="#FFF1F8" fill-opacity="0.82" stroke="#B83280" stroke-width="2.4"/>
+  <line x1="485" y1="863" x2="825" y2="863" stroke="#B83280" stroke-width="1.5" opacity="0.72"/>
+  <text x="499" y="850" class="object-title">recetaLosartan : Prescripcion</text>
+  <text x="499" y="887" class="object-attr">id_prescripcion = 1</text>
+  <text x="499" y="909" class="object-attr">medicamento = Losartan</text>
+  <text x="499" y="931" class="object-attr">dosis = 50 mg</text>
+  <text x="499" y="953" class="object-attr">frecuencia = cada 24 horas</text>
+  <text x="499" y="975" class="object-attr">costo = 180.00</text>
+</g>
+<g id="cargo">
+  <rect x="915" y="825" width="330" height="170" rx="8" fill="#F7FAFC" fill-opacity="0.82" stroke="#4A5568" stroke-width="2.4"/>
+  <line x1="915" y1="863" x2="1245" y2="863" stroke="#4A5568" stroke-width="1.5" opacity="0.72"/>
+  <text x="929" y="850" class="object-title">cargoConsulta : CargoPaciente</text>
+  <text x="929" y="887" class="object-attr">id_cargo = 1</text>
+  <text x="929" y="909" class="object-attr">origen = consulta</text>
+  <text x="929" y="931" class="object-attr">referencia_tipo = visita</text>
+  <text x="929" y="953" class="object-attr">total = 350.00</text>
+  <text x="929" y="975" class="object-attr">estado_pago = pagado</text>
+</g>
+<g id="pago">
+  <rect x="930" y="1080" width="315" height="155" rx="8" fill="#EEFDF3" fill-opacity="0.82" stroke="#276749" stroke-width="2.4"/>
+  <line x1="930" y1="1118" x2="1245" y2="1118" stroke="#276749" stroke-width="1.5" opacity="0.72"/>
+  <text x="944" y="1105" class="object-title">pagoConsulta : Pago</text>
+  <text x="944" y="1142" class="object-attr">id_pago = 1</text>
+  <text x="944" y="1164" class="object-attr">monto = 350.00</text>
+  <text x="944" y="1186" class="object-attr">metodo = Efectivo</text>
+  <text x="944" y="1208" class="object-attr">referencia = PAGO-CONS-001</text>
+</g>
+<g id="insumo">
+  <rect x="465" y="1080" width="360" height="155" rx="8" fill="#F4F8FF" fill-opacity="0.82" stroke="#315A9B" stroke-width="2.4"/>
+  <line x1="465" y1="1118" x2="825" y2="1118" stroke="#315A9B" stroke-width="1.5" opacity="0.72"/>
+  <text x="479" y="1105" class="object-title">reactivoGlucosa : InsumoLaboratorio</text>
+  <text x="479" y="1142" class="object-attr">id_insumo = 2</text>
+  <text x="479" y="1164" class="object-attr">nombre = Reactivo de glucosa</text>
+  <text x="479" y="1186" class="object-attr">stock = 8</text>
+  <text x="479" y="1208" class="object-attr">stock_minimo = 20</text>
+  <text x="479" y="1230" class="object-attr">alerta = stock bajo</text>
+</g>
+<g id="movimiento">
+  <rect x="465" y="1295" width="360" height="145" rx="8" fill="#FBF8E9" fill-opacity="0.82" stroke="#9A6B12" stroke-width="2.4"/>
+  <line x1="465" y1="1333" x2="825" y2="1333" stroke="#9A6B12" stroke-width="1.5" opacity="0.72"/>
+  <text x="479" y="1320" class="object-title">entradaReactivo : MovimientoInsumo</text>
+  <text x="479" y="1357" class="object-attr">id_movimiento = 1</text>
+  <text x="479" y="1379" class="object-attr">tipo = entrada</text>
+  <text x="479" y="1401" class="object-attr">cantidad = 8</text>
+  <text x="479" y="1423" class="object-attr">motivo = Carga inicial</text>
+</g>
+</svg>

@@ -42,6 +42,19 @@ function sendInvalidId(res, entityName) {
   return res.status(400).json({ message: `El id de ${entityName} no es valido.` });
 }
 
+const REFERENCING_TABLE_LABELS = {
+  citas: "citas",
+  visitas_medicas: "visitas medicas",
+  ordenes_laboratorio: "ordenes de laboratorio",
+  resultados_laboratorio: "resultados de laboratorio",
+  prescripciones: "prescripciones",
+  cargos_paciente: "cargos",
+  pagos: "pagos",
+  usuarios: "usuarios",
+  triajes: "triajes",
+  movimientos_insumos_laboratorio: "movimientos de insumos",
+};
+
 function handleDatabaseError(error, res, fallbackMessage) {
   console.error(error);
 
@@ -49,6 +62,7 @@ function handleDatabaseError(error, res, fallbackMessage) {
     pacientes_dni_key: "Ya existe un paciente con ese DNI.",
     medicos_licencia_key: "Ya existe un medico con esa licencia.",
     visitas_medicas_id_cita_key: "La cita ya tiene una visita medica asociada.",
+    citas_medico_fecha_activa_key: "El medico ya tiene una cita activa programada en ese mismo horario.",
     resultados_laboratorio_id_orden_key: "La orden de laboratorio ya tiene un resultado registrado.",
     cargos_paciente_referencia_tipo_referencia_id_key: "El cargo para este registro ya existe.",
   };
@@ -59,6 +73,20 @@ function handleDatabaseError(error, res, fallbackMessage) {
   }
 
   if (error.code === "23503") {
+    // Distinguir entre dos causas posibles del mismo codigo de error:
+    // 1) Se intento insertar/actualizar con una referencia a un registro padre inexistente.
+    // 2) Se intento eliminar un registro que todavia tiene otros registros (hijos) que lo referencian.
+    const detail = error.detail || "";
+    const stillReferenced = /is still referenced from table "([^"]+)"/.exec(detail);
+
+    if (stillReferenced) {
+      const tableName = stillReferenced[1];
+      const label = REFERENCING_TABLE_LABELS[tableName] || tableName;
+      return res.status(409).json({
+        message: `No se puede eliminar: tiene ${label} asociadas. Elimine o reasigne esos registros primero.`,
+      });
+    }
+
     return res.status(400).json({
       message: "Una de las referencias relacionadas no existe en la base de datos.",
     });

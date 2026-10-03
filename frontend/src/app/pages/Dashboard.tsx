@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { Header } from "../components/layout/Header";
 import {
   Activity,
   AlertCircle,
   ArrowUpRight,
+  Banknote,
   CalendarDays,
-  CheckCircle2,
   Clock3,
   Database,
+  ListOrdered,
+  ShieldAlert,
   ShieldCheck,
-  Stethoscope,
+  TimerReset,
+  TrendingUp,
   Users,
+  Wallet,
 } from "lucide-react";
 import {
   Area,
@@ -30,7 +34,9 @@ import { fetchAppointments, type AppointmentRecord } from "../api/appointments";
 import { fetchDashboardSummary, fetchHealthStatus, type DashboardSummaryRecord, type HealthStatusRecord } from "../api/dashboard";
 import { fetchDoctors, type DoctorRecord } from "../api/doctors";
 import { fetchPatients, type PatientRecord } from "../api/patients";
-import { appointments as mockAppointments, chartData, doctors as mockDoctors, patients as mockPatients } from "../data/mockData";
+import { fetchAnalysisIndicators, fetchPriorityQueue, type AnalysisIndicators, type ClinicalPriority, type PriorityQueueRecord } from "../api/analysis";
+import { fetchCharges, type ChargeRecord } from "../api/billing";
+import { Skeleton } from "../components/ui/skeleton";
 
 type UiStatus = "pendiente" | "confirmada" | "en_curso" | "completada" | "cancelada";
 
@@ -40,44 +46,36 @@ interface DashboardState {
   health: HealthStatusRecord | null;
   patients: PatientRecord[] | null;
   summary: DashboardSummaryRecord | null;
+  indicators: AnalysisIndicators | null;
+  priorityQueue: PriorityQueueRecord[] | null;
+  charges: ChargeRecord[] | null;
   warnings: string[];
 }
 
-const statusMeta: Record<
-  UiStatus,
-  { label: string; pill: string; chartColor: string; summary: string }
-> = {
-  pendiente: {
-    label: "Pendientes",
-    pill: "bg-blue-50 text-blue-700 border-blue-200",
-    chartColor: "#2563eb",
-    summary: "Por confirmar",
-  },
-  confirmada: {
-    label: "Confirmadas",
-    pill: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    chartColor: "#4f46e5",
-    summary: "Agenda asegurada",
-  },
-  en_curso: {
-    label: "En curso",
-    pill: "bg-amber-50 text-amber-700 border-amber-200",
-    chartColor: "#f59e0b",
-    summary: "Atención activa",
-  },
-  completada: {
-    label: "Completadas",
-    pill: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    chartColor: "#10b981",
-    summary: "Circuito cerrado",
-  },
-  cancelada: {
-    label: "Canceladas",
-    pill: "bg-rose-50 text-rose-700 border-rose-200",
-    chartColor: "#f43f5e",
-    summary: "Requieren seguimiento",
-  },
+// Paleta categorica de la marca (theme.css --chart-1..5), reutilizada para
+// el estado de la agenda en vez de colores Tailwind genericos.
+const statusMeta: Record<UiStatus, { label: string; color: string; hint: string }> = {
+  pendiente: { label: "Pendientes", color: "#1d4ed8", hint: "Por confirmar" },
+  confirmada: { label: "Confirmadas", color: "#7c3aed", hint: "Agenda asegurada" },
+  en_curso: { label: "En curso", color: "#c2410c", hint: "Atención activa" },
+  completada: { label: "Completadas", color: "#059669", hint: "Circuito cerrado" },
+  cancelada: { label: "Canceladas", color: "#dc2626", hint: "Requieren seguimiento" },
 };
+
+// Colores de prioridad clinica (theme.css --triage-*): rojo se reserva
+// exclusivamente para lo critico, siguiendo la convencion de triaje.
+const priorityMeta: Record<ClinicalPriority, { label: string; color: string }> = {
+  critica: { label: "Crítica", color: "#dc2626" },
+  alta: { label: "Alta", color: "#ea580c" },
+  media: { label: "Media", color: "#ca8a04" },
+  baja: { label: "Baja", color: "#16a34a" },
+};
+
+const currencyFormatter = new Intl.NumberFormat("es-GT", {
+  style: "currency",
+  currency: "GTQ",
+  maximumFractionDigits: 0,
+});
 
 function toLocalDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -148,8 +146,23 @@ function buildFallbackState(): DashboardState {
     patients: null,
     doctors: null,
     appointments: null,
+    indicators: null,
+    priorityQueue: null,
+    charges: null,
     warnings: [],
   };
+}
+
+function ColorTag({ color, label }: { color: string; label: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+      style={{ backgroundColor: `${color}17`, borderColor: `${color}33`, color }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+      {label}
+    </span>
+  );
 }
 
 function KpiCard({
@@ -158,28 +171,58 @@ function KpiCard({
   description,
   icon: Icon,
   tone,
+  loading,
 }: {
   title: string;
   value: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
   tone: string;
+  loading?: boolean;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-slate-500">{title}</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
-          <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500">
-            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
-            {description}
-          </p>
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          {loading ? (
+            <Skeleton className="mt-2 h-8 w-20" />
+          ) : (
+            <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+          )}
+          <p className="mt-2 truncate text-xs text-muted-foreground">{description}</p>
         </div>
-        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${tone}`}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  action,
+  children,
+  className = "",
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${className}`}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+        {action}
+      </div>
+      {children}
     </div>
   );
 }
@@ -192,40 +235,45 @@ export default function Dashboard() {
     const controller = new AbortController();
 
     async function loadDashboard() {
-      const [summaryResult, healthResult, patientsResult, doctorsResult, appointmentsResult] =
-        await Promise.allSettled([
-          fetchDashboardSummary(controller.signal),
-          fetchHealthStatus(controller.signal),
-          fetchPatients(controller.signal),
-          fetchDoctors(undefined, controller.signal),
-          fetchAppointments(undefined, controller.signal),
-        ]);
+      const [
+        summaryResult,
+        healthResult,
+        patientsResult,
+        doctorsResult,
+        appointmentsResult,
+        indicatorsResult,
+        priorityQueueResult,
+        chargesResult,
+      ] = await Promise.allSettled([
+        fetchDashboardSummary(controller.signal),
+        fetchHealthStatus(controller.signal),
+        fetchPatients(controller.signal),
+        fetchDoctors(undefined, controller.signal),
+        fetchAppointments(undefined, controller.signal),
+        fetchAnalysisIndicators(controller.signal),
+        fetchPriorityQueue(controller.signal),
+        fetchCharges(undefined, controller.signal),
+      ]);
 
       if (controller.signal.aborted) {
         return;
       }
 
       const warnings: string[] = [];
+      const pushWarning = (result: PromiseSettledResult<unknown>, fallback: string) => {
+        if (result.status === "rejected") {
+          warnings.push(result.reason instanceof Error ? result.reason.message : fallback);
+        }
+      };
 
-      if (summaryResult.status === "rejected") {
-        warnings.push(summaryResult.reason instanceof Error ? summaryResult.reason.message : "Resumen no disponible.");
-      }
-
-      if (healthResult.status === "rejected") {
-        warnings.push(healthResult.reason instanceof Error ? healthResult.reason.message : "Salud del sistema no disponible.");
-      }
-
-      if (patientsResult.status === "rejected") {
-        warnings.push(patientsResult.reason instanceof Error ? patientsResult.reason.message : "Pacientes no disponibles.");
-      }
-
-      if (doctorsResult.status === "rejected") {
-        warnings.push(doctorsResult.reason instanceof Error ? doctorsResult.reason.message : "Doctores no disponibles.");
-      }
-
-      if (appointmentsResult.status === "rejected") {
-        warnings.push(appointmentsResult.reason instanceof Error ? appointmentsResult.reason.message : "Citas no disponibles.");
-      }
+      pushWarning(summaryResult, "Resumen no disponible.");
+      pushWarning(healthResult, "Salud del sistema no disponible.");
+      pushWarning(patientsResult, "Pacientes no disponibles.");
+      pushWarning(doctorsResult, "Doctores no disponibles.");
+      pushWarning(appointmentsResult, "Citas no disponibles.");
+      pushWarning(indicatorsResult, "Indicadores clínicos no disponibles.");
+      pushWarning(priorityQueueResult, "Cola de prioridad no disponible.");
+      pushWarning(chargesResult, "Cargos no disponibles.");
 
       setState({
         summary: summaryResult.status === "fulfilled" ? summaryResult.value : null,
@@ -233,6 +281,9 @@ export default function Dashboard() {
         patients: patientsResult.status === "fulfilled" ? patientsResult.value : null,
         doctors: doctorsResult.status === "fulfilled" ? doctorsResult.value : null,
         appointments: appointmentsResult.status === "fulfilled" ? appointmentsResult.value : null,
+        indicators: indicatorsResult.status === "fulfilled" ? indicatorsResult.value : null,
+        priorityQueue: priorityQueueResult.status === "fulfilled" ? priorityQueueResult.value : null,
+        charges: chargesResult.status === "fulfilled" ? chargesResult.value : null,
         warnings,
       });
       setIsLoading(false);
@@ -259,13 +310,7 @@ export default function Dashboard() {
         }));
     }
 
-    return mockPatients.slice(0, 5).map((patient) => ({
-      id: patient.id,
-      name: patient.name,
-      document: patient.insuranceNumber,
-      contact: patient.phone,
-      date: formatDate(patient.lastVisit),
-    }));
+    return [];
   }, [state.patients]);
 
   const agenda = useMemo(() => {
@@ -283,15 +328,7 @@ export default function Dashboard() {
         .sort((left, right) => left.time.localeCompare(right.time));
     }
 
-    return mockAppointments.map((appointment) => ({
-      id: appointment.id,
-      patientName: appointment.patientName,
-      doctorName: appointment.doctorName,
-      specialty: appointment.specialty,
-      status: normalizeStatus(appointment.status),
-      time: appointment.time,
-      dateKey: appointment.date,
-    }));
+    return [];
   }, [state.appointments]);
 
   const todayAgenda = agenda.filter((appointment) => appointment.dateKey === todayKey);
@@ -314,7 +351,7 @@ export default function Dashboard() {
         return {
           name: statusMeta[key].label,
           value: item.total,
-          color: statusMeta[key].chartColor,
+          color: statusMeta[key].color,
         };
       });
     }
@@ -324,13 +361,7 @@ export default function Dashboard() {
         ...accumulator,
         [item.status]: accumulator[item.status] + 1,
       }),
-      {
-        pendiente: 0,
-        confirmada: 0,
-        en_curso: 0,
-        completada: 0,
-        cancelada: 0,
-      }
+      { pendiente: 0, confirmada: 0, en_curso: 0, completada: 0, cancelada: 0 }
     );
 
     return (Object.keys(counts) as UiStatus[])
@@ -338,9 +369,45 @@ export default function Dashboard() {
       .map((status) => ({
         name: statusMeta[status].label,
         value: counts[status],
-        color: statusMeta[status].chartColor,
+        color: statusMeta[status].color,
       }));
   }, [agenda, state.summary]);
+
+  const priorityDistribution = useMemo(() => {
+    if (!state.appointments) {
+      return [];
+    }
+
+    const active = state.appointments.filter(
+      (appointment) => appointment.estado !== "completada" && appointment.estado !== "cancelada"
+    );
+
+    const counts = active.reduce<Record<ClinicalPriority, number>>(
+      (accumulator, appointment) => ({
+        ...accumulator,
+        [appointment.prioridad_clinica]: (accumulator[appointment.prioridad_clinica] || 0) + 1,
+      }),
+      { baja: 0, media: 0, alta: 0, critica: 0 }
+    );
+
+    return (Object.keys(counts) as ClinicalPriority[])
+      .filter((priority) => counts[priority] > 0)
+      .map((priority) => ({
+        name: priorityMeta[priority].label,
+        value: counts[priority],
+        color: priorityMeta[priority].color,
+      }));
+  }, [state.appointments]);
+
+  const priorityQueueTop = useMemo(() => {
+    if (!state.priorityQueue) {
+      return [];
+    }
+
+    return [...state.priorityQueue]
+      .sort((left, right) => right.puntaje_prioridad - left.puntaje_prioridad)
+      .slice(0, 6);
+  }, [state.priorityQueue]);
 
   const doctorLoad = useMemo(() => {
     if (state.doctors && state.appointments) {
@@ -366,27 +433,53 @@ export default function Dashboard() {
         .slice(0, 5);
     }
 
-    return mockDoctors
-      .map((doctor) => ({
-        id: doctor.id,
-        name: doctor.name,
-        specialty: doctor.specialty,
-        load: mockAppointments.filter((appointment) => appointment.doctorId === doctor.id).length,
-      }))
-      .sort((left, right) => right.load - left.load)
-      .slice(0, 5);
+    return [];
   }, [state.appointments, state.doctors]);
 
-  const patientsTotal = state.summary?.total_pacientes ?? state.patients?.length ?? mockPatients.length;
-  const doctorsTotal = state.summary?.total_medicos ?? state.doctors?.length ?? mockDoctors.length;
-  const appointmentsTotal = state.summary?.total_citas ?? state.appointments?.length ?? mockAppointments.length;
+  const financials = useMemo(() => {
+    if (!state.charges) {
+      return { cobrado: null as number | null, pendiente: null as number | null, porOrigen: [] as Array<{ origen: string; total: number }> };
+    }
+
+    const cobrado = state.charges.reduce((sum, charge) => sum + Number(charge.total_pagado || 0), 0);
+    const pendiente = state.charges.reduce((sum, charge) => sum + Number(charge.saldo || 0), 0);
+
+    const origenLabels: Record<string, string> = {
+      consulta: "Consultas",
+      laboratorio: "Laboratorio",
+      farmacia: "Farmacia",
+    };
+
+    const porOrigenMap = state.charges.reduce<Record<string, number>>((accumulator, charge) => {
+      return { ...accumulator, [charge.origen]: (accumulator[charge.origen] || 0) + Number(charge.total || 0) };
+    }, {});
+
+    const porOrigen = Object.entries(porOrigenMap)
+      .map(([origen, total]) => ({ origen: origenLabels[origen] || origen, total }))
+      .sort((left, right) => right.total - left.total);
+
+    return { cobrado, pendiente, porOrigen };
+  }, [state.charges]);
+
+  const frequentLists = useMemo(() => {
+    const diagnosticos = state.indicators?.diagnosticos_frecuentes?.slice(0, 5) ?? [];
+    const motivos = state.indicators?.motivos_frecuentes?.slice(0, 5) ?? [];
+    const maxDiagnostico = Math.max(1, ...diagnosticos.map((item) => item.total));
+    const maxMotivo = Math.max(1, ...motivos.map((item) => item.total));
+
+    return { diagnosticos, motivos, maxDiagnostico, maxMotivo };
+  }, [state.indicators]);
+
+  const patientsTotal = state.summary?.total_pacientes ?? state.patients?.length ?? null;
+  const doctorsTotal = state.summary?.total_medicos ?? state.doctors?.length ?? null;
+  const appointmentsTotal = state.summary?.total_citas ?? state.appointments?.length ?? null;
   const liveAppointmentsToday = todayAgenda.length;
-  const completedCount =
-    statusDistribution.find((item) => item.name === statusMeta.completada.label)?.value || 0;
+  const esperaPromedio = state.indicators?.espera_promedio_minutos ?? null;
+  const altaPrioridad = state.indicators?.citas_alta_prioridad ?? null;
   const operationalText =
     state.health?.status === "ok" && state.health.database === "connected"
       ? "API y base de datos conectadas"
-      : "Operando con respaldo visual";
+      : "Conexión pendiente de verificar";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -394,95 +487,177 @@ export default function Dashboard() {
 
       <div className="flex-1 space-y-6 p-4 lg:p-6">
         {state.warnings.length > 0 && (
-          <div className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm">
+          <div className="rounded-2xl border border-warning/30 bg-warning-bg px-5 py-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning" />
               <div>
-                <p className="text-sm font-medium text-amber-800">
-                  Algunas fuentes no respondieron. El dashboard mantiene contenido de respaldo para no dejar la vista vacía.
+                <p className="text-sm font-medium text-warning">
+                  Algunos datos no están disponibles. Intenta recargar la página.
                 </p>
-                <p className="mt-1 text-xs text-amber-700">{state.warnings.join(" · ")}</p>
+                <p className="mt-1 text-xs text-warning/80">{state.warnings.join(" · ")}</p>
               </div>
             </div>
           </div>
         )}
 
+        {/* KPIs clinicos principales: cada uno habilita una decision concreta
+            (staffing, priorizacion, cobros) en vez de solo llenar espacio. */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             title="Pacientes registrados"
-            value={patientsTotal.toLocaleString("es-MX")}
-            description={state.patients ? "Sincronizado con la API real" : "Vista de respaldo disponible"}
+            value={patientsTotal?.toLocaleString("es-MX") ?? "—"}
+            description={state.patients ? "Pacientes en el sistema" : "Datos no disponibles"}
             icon={Users}
-            tone="bg-blue-50 text-blue-600"
-          />
-          <KpiCard
-            title="Doctores activos"
-            value={doctorsTotal.toLocaleString("es-MX")}
-            description={state.doctors ? "Equipo cargado correctamente" : "Usando plantilla visual"}
-            icon={Stethoscope}
-            tone="bg-emerald-50 text-emerald-600"
+            tone="bg-accent text-accent-foreground"
+            loading={isLoading}
           />
           <KpiCard
             title="Citas de hoy"
             value={liveAppointmentsToday.toLocaleString("es-MX")}
             description={liveAppointmentsToday > 0 ? "Agenda activa para hoy" : "Sin citas registradas hoy"}
             icon={CalendarDays}
-            tone="bg-violet-50 text-violet-600"
+            tone="bg-primary/10 text-primary"
+            loading={isLoading}
           />
           <KpiCard
-            title="Salud del sistema"
-            value={state.health?.status === "ok" ? "Online" : "Respaldo"}
-            description={operationalText}
-            icon={state.health?.status === "ok" ? ShieldCheck : Database}
-            tone={state.health?.status === "ok" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}
+            title="Espera promedio"
+            value={esperaPromedio != null ? `${Math.round(esperaPromedio)} min` : "—"}
+            description="Tiempo entre llegada y atención"
+            icon={TimerReset}
+            tone="bg-warning-bg text-warning"
+            loading={isLoading}
+          />
+          <KpiCard
+            title="Prioridad alta / crítica"
+            value={altaPrioridad != null ? altaPrioridad.toLocaleString("es-MX") : "—"}
+            description="Casos activos que requieren atención pronta"
+            icon={ShieldAlert}
+            tone="bg-destructive-bg text-destructive"
+            loading={isLoading}
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Tendencia de citas</h3>
-                <p className="text-sm text-slate-500">Histórico visual de los últimos seis meses</p>
-              </div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                <Activity className="h-3.5 w-3.5" />
-                {appointmentsTotal} citas acumuladas
-              </span>
+        {/* Franja operativa y financiera: compacta a proposito para no competir
+            con los KPIs clinicos, pero visible sin scroll. */}
+        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success-bg text-success">
+              <Banknote className="h-5 w-5" />
             </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Cobrado (histórico)</p>
+              <p className="truncate text-lg font-semibold text-foreground">
+                {financials.cobrado != null ? currencyFormatter.format(financials.cobrado) : "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:border-x sm:border-border sm:px-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warning-bg text-warning">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Pendiente de cobro</p>
+              <p className="truncate text-lg font-semibold text-foreground">
+                {financials.pendiente != null ? currencyFormatter.format(financials.pendiente) : "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                state.health?.status === "ok" ? "bg-success-bg text-success" : "bg-warning-bg text-warning"
+              }`}
+            >
+              {state.health?.status === "ok" ? <ShieldCheck className="h-5 w-5" /> : <Database className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Estado del sistema</p>
+              <p className="truncate text-sm font-medium text-foreground">{operationalText}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cola de prioridad clinica: la vista mas accionable del panel — quien
+            hay que atender primero, hace cuanto espera y por que. */}
+        <SectionCard
+          title="Cola de prioridad clínica"
+          subtitle="Pacientes activos ordenados por urgencia clínica"
+          action={
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              <ListOrdered className="h-3.5 w-3.5" />
+              {priorityQueueTop.length} en cola
+            </span>
+          }
+        >
+          {priorityQueueTop.length > 0 ? (
+            <div className="space-y-2">
+              {priorityQueueTop.map((item) => (
+                <div
+                  key={item.id_cita}
+                  className="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                      {getPatientInitials(item.paciente_nombre || "Paciente")}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">{item.paciente_nombre || "Paciente pendiente"}</p>
+                        <ColorTag color={priorityMeta[item.prioridad_clinica].color} label={priorityMeta[item.prioridad_clinica].label} />
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {item.motivo || "Motivo no especificado"} · {item.medico_nombre || "Doctor por asignar"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center gap-2 self-start rounded-xl bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm sm:self-auto">
+                    <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
+                    {item.minutos_espera != null ? `${item.minutos_espera} min esperando` : "Sin registro de espera"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No hay pacientes activos en la cola de prioridad en este momento.
+            </p>
+          )}
+        </SectionCard>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <SectionCard
+            title="Tendencia de citas"
+            subtitle="Citas registradas en los últimos seis meses"
+            className="xl:col-span-2"
+            action={
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <Activity className="h-3.5 w-3.5" />
+                {appointmentsTotal ?? "—"} citas acumuladas
+              </span>
+            }
+          >
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={chartData.appointmentsPerMonth}>
+              <AreaChart data={state.summary?.citas_por_mes ?? []}>
                 <defs>
                   <linearGradient id="dashboard-area-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.18} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#059669" stopOpacity={0.22} />
+                    <stop offset="95%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="mes" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                 <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="citas" stroke="#2563eb" strokeWidth={2.5} fill="url(#dashboard-area-fill)" />
+                <Area type="monotone" dataKey="citas" stroke="#059669" strokeWidth={2.5} fill="url(#dashboard-area-fill)" />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </SectionCard>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Estado de la agenda</h3>
-              <p className="text-sm text-slate-500">Distribución actual por estado</p>
-            </div>
-            <ResponsiveContainer width="100%" height={210}>
+          <SectionCard title="Prioridad clínica activa" subtitle="Distribución de citas activas por urgencia">
+            <ResponsiveContainer width="100%" height={190}>
               <PieChart>
-                <Pie
-                  data={statusDistribution}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={52}
-                  outerRadius={78}
-                  paddingAngle={4}
-                >
-                  {statusDistribution.map((item) => (
+                <Pie data={priorityDistribution} dataKey="value" nameKey="name" innerRadius={48} outerRadius={72} paddingAngle={4}>
+                  {priorityDistribution.map((item) => (
                     <Cell key={item.name} fill={item.color} />
                   ))}
                 </Pie>
@@ -490,133 +665,126 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-2">
-              {statusDistribution.map((item) => (
-                <div key={item.name} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-sm text-slate-600">{item.name}</span>
+              {priorityDistribution.length > 0 ? (
+                priorityDistribution.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between rounded-xl bg-muted px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-sm text-muted-foreground">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{item.value}</span>
                   </div>
-                  <span className="text-sm font-medium text-slate-900">{item.value}</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="py-2 text-center text-xs text-muted-foreground">Sin citas activas para clasificar.</p>
+              )}
             </div>
-          </div>
+          </SectionCard>
         </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2 rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 p-5">
+          <div className="rounded-2xl border border-border bg-card shadow-sm xl:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border p-5">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">
+                <h3 className="text-lg font-semibold text-foreground">
                   {nextAgendaDate === todayKey ? "Agenda de hoy" : `Próxima agenda: ${formatDate(nextAgendaDate)}`}
                 </h3>
-                <p className="text-sm text-slate-500">Citas priorizadas para seguimiento y operación</p>
+                <p className="text-sm text-muted-foreground">Citas priorizadas para seguimiento y operación</p>
               </div>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+              <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                 {visibleAgenda.length} visibles
               </span>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-border">
               {visibleAgenda.length > 0 ? (
                 visibleAgenda.map((appointment) => (
                   <div key={appointment.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium text-slate-900">{appointment.patientName}</p>
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusMeta[appointment.status].pill}`}>
-                          {statusMeta[appointment.status].label}
-                        </span>
+                        <p className="text-sm font-medium text-foreground">{appointment.patientName}</p>
+                        <ColorTag color={statusMeta[appointment.status].color} label={statusMeta[appointment.status].label} />
                       </div>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {appointment.doctorName} · {appointment.specialty}
                       </p>
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                      <Clock3 className="h-4 w-4 text-slate-400" />
+                    <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-sm text-foreground">
+                      <Clock3 className="h-4 w-4 text-muted-foreground" />
                       {appointment.time}
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="px-5 py-10 text-center">
-                  <p className="text-sm text-slate-500">No hay citas disponibles para mostrar en la agenda actual.</p>
+                  <p className="text-sm text-muted-foreground">No hay citas disponibles para mostrar en la agenda actual.</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Pulso operativo</h3>
-              <p className="text-sm text-slate-500">Indicadores rápidos para coordinación</p>
+          <SectionCard title="Estado de la agenda" subtitle="Distribución actual por estado">
+            <div className="space-y-2">
+              {statusDistribution.length > 0 ? (
+                statusDistribution.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between rounded-xl bg-muted px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-sm text-muted-foreground">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{item.value}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-2 text-center text-xs text-muted-foreground">Sin citas registradas todavía.</p>
+              )}
             </div>
-
-            <div className="space-y-3">
-              <div className="rounded-2xl bg-emerald-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Citas cerradas</p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-900">{completedCount}</p>
-                <p className="text-xs text-emerald-700">Episodios completados durante el período actual</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Conectividad</p>
-                <p className="mt-2 text-sm font-medium text-slate-900">{operationalText}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {isLoading ? "Actualizando panel..." : "Estado revisado desde el backend disponible."}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-blue-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Cobertura del equipo</p>
-                <p className="mt-2 text-sm font-medium text-blue-900">{doctorLoad.length} doctores monitoreados</p>
-                <p className="mt-1 text-xs text-blue-700">
-                  Vista rápida de carga clínica y seguimiento de agenda.
-                </p>
-              </div>
-            </div>
-          </div>
+          </SectionCard>
         </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Últimos ingresos</h3>
-              <p className="text-sm text-slate-500">Pacientes registrados recientemente</p>
-            </div>
+          <SectionCard title="Últimos ingresos" subtitle="Pacientes registrados recientemente">
             <div className="space-y-3">
-              {patientCards.map((patient) => (
-                <div key={patient.id} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600/10 text-sm font-semibold text-blue-700">
-                    {getPatientInitials(patient.name)}
+              {patientCards.length > 0 ? (
+                patientCards.map((patient) => (
+                  <div key={patient.id} className="flex items-center gap-3 rounded-xl bg-muted px-3 py-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                      {getPatientInitials(patient.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{patient.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {patient.document} · {patient.contact}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">{patient.date}</div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">{patient.name}</p>
-                    <p className="truncate text-xs text-slate-500">{patient.document} · {patient.contact}</p>
-                  </div>
-                  <div className="text-right text-xs text-slate-400">{patient.date}</div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="py-2 text-center text-xs text-muted-foreground">Aún no hay pacientes registrados.</p>
+              )}
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Carga por doctor</h3>
-                <p className="text-sm text-slate-500">Comparativo actual según citas asociadas</p>
-              </div>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-                Top 5
+          <SectionCard
+            title="Carga por doctor"
+            subtitle={`Comparativo actual según citas asociadas · ${doctorsTotal ?? "—"} doctores en total`}
+            className="xl:col-span-2"
+            action={
+              <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                Primeros 5
               </span>
-            </div>
+            }
+          >
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-3">
                 {doctorLoad.map((doctor) => (
-                  <div key={doctor.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                  <div key={doctor.id} className="rounded-xl border border-border bg-muted/40 px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{doctor.name}</p>
-                        <p className="text-xs text-slate-500">{doctor.specialty}</p>
+                        <p className="text-sm font-medium text-foreground">{doctor.name}</p>
+                        <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                      <span className="rounded-full bg-card px-3 py-1 text-xs font-semibold text-foreground shadow-sm">
                         {doctor.load} cita(s)
                       </span>
                     </div>
@@ -626,15 +794,86 @@ export default function Dashboard() {
 
               <ResponsiveContainer width="100%" height={230}>
                 <BarChart data={doctorLoad}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="name" hide />
                   <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                   <Tooltip formatter={(value) => [`${value}`, "Citas"]} />
-                  <Bar dataKey="load" radius={[10, 10, 0, 0]} fill="#2563eb" />
+                  <Bar dataKey="load" radius={[10, 10, 0, 0]} fill="#059669" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </SectionCard>
+        </div>
+
+        {/* Insights clinicos: motivos y diagnosticos mas frecuentes, para
+            identificar patrones sin tener que abrir el modulo de analisis. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <SectionCard title="Diagnósticos frecuentes" subtitle="Los más registrados en visitas recientes">
+            {frequentLists.diagnosticos.length > 0 ? (
+              <div className="space-y-3">
+                {frequentLists.diagnosticos.map((item) => (
+                  <div key={item.diagnostico}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="truncate text-foreground">{item.diagnostico}</span>
+                      <span className="ml-2 shrink-0 font-medium text-muted-foreground">{item.total}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${Math.max(6, (item.total / frequentLists.maxDiagnostico) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-2 text-center text-xs text-muted-foreground">Sin diagnósticos registrados aún.</p>
+            )}
+          </SectionCard>
+
+          <SectionCard title="Motivos de consulta frecuentes" subtitle="Principales razones de visita">
+            {frequentLists.motivos.length > 0 ? (
+              <div className="space-y-3">
+                {frequentLists.motivos.map((item) => (
+                  <div key={item.motivo}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="truncate text-foreground">{item.motivo}</span>
+                      <span className="ml-2 shrink-0 font-medium text-muted-foreground">{item.total}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-accent-foreground"
+                        style={{ width: `${Math.max(6, (item.total / frequentLists.maxMotivo) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-2 text-center text-xs text-muted-foreground">Sin motivos registrados aún.</p>
+            )}
+          </SectionCard>
+        </div>
+
+        {financials.porOrigen.length > 0 && (
+          <SectionCard title="Facturación por origen" subtitle="Distribución de cargos generados por tipo de servicio">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {financials.porOrigen.map((item) => (
+                <div key={item.origen} className="rounded-xl border border-border bg-muted/40 px-4 py-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    {item.origen}
+                  </div>
+                  <p className="mt-2 text-xl font-semibold text-foreground">{currencyFormatter.format(item.total)}</p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        )}
+
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <ArrowUpRight className="h-3.5 w-3.5" />
+          {isLoading ? "Actualizando panel..." : "Datos sincronizados con el backend."}
         </div>
       </div>
     </div>

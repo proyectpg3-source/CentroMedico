@@ -6,7 +6,13 @@ const { getTrimmedString } = require("../../utils/validators");
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "8h";
 const SALT_ROUNDS = 12;
-const VALID_ROLES = new Set(["admin", "medico", "recepcionista"]);
+const VALID_ROLES = new Set([
+  "admin",
+  "medico",
+  "enfermero",
+  "fundacion",
+  "recepcionista",
+]);
 
 function getJwtSecret() {
   if (!process.env.JWT_SECRET) {
@@ -40,9 +46,16 @@ function safeUser(usuario) {
 async function login(body) {
   const email = getTrimmedString(body.email).toLowerCase();
   const password = getTrimmedString(body.password);
+  const requestedRole = getTrimmedString(body.rol).toLowerCase();
 
   if (!email || !password) {
     const error = new Error("Email y contrasena son obligatorios.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (requestedRole && !VALID_ROLES.has(requestedRole)) {
+    const error = new Error(`Rol invalido. Usa: ${[...VALID_ROLES].join(", ")}.`);
     error.status = 400;
     throw error;
   }
@@ -67,6 +80,12 @@ async function login(body) {
   if (!passwordOk) {
     const error = new Error(invalidMessage);
     error.status = 401;
+    throw error;
+  }
+
+  if (requestedRole && usuario.rol !== requestedRole) {
+    const error = new Error("La cuenta no corresponde al area de acceso seleccionada.");
+    error.status = 403;
     throw error;
   }
 

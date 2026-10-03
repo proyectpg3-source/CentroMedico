@@ -8,6 +8,7 @@
     "dev": "node index.js",
     "db:check": "node scripts/check-db.js",
     "db:seed": "node scripts/seed.js",
+    "auth:create-admin": "node scripts/create-admin.js",
     "test": "node --check index.js && node --check schema.js && node --check scripts/seed.js && node --check scripts/check-db.js && node --check scripts/test-clinical-flow.js && node -e \"require('./src/app'); console.log('app ok')\"",
     "test:clinical": "node scripts/test-clinical-flow.js"
   },

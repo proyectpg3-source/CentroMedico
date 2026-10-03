@@ -1,8 +1,10 @@
 const express = require("express");
+const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
 const svc = require("./medicos.service");
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get("/", async (req, res) => {
   try { res.json(await svc.getAll(req.query)); }
@@ -19,7 +21,7 @@ router.get("/:id", async (req, res) => {
   } catch (error) { handleDatabaseError(error, res, "Error al obtener el medico."); }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireRole("admin"), async (req, res) => {
   try {
     const data = svc.sanitize(req.body);
     if (!svc.validate(data, res)) return;
@@ -27,7 +29,7 @@ router.post("/", async (req, res) => {
   } catch (error) { handleDatabaseError(error, res, "Error al insertar medico."); }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireRole("admin"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "medico");
@@ -39,7 +41,7 @@ router.put("/:id", async (req, res) => {
   } catch (error) { handleDatabaseError(error, res, "Error al actualizar medico."); }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireRole("admin"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "medico");

@@ -1,3 +1,5 @@
+import { getAuthToken } from "../auth/storage";
+
 const DEFAULT_API_BASE_URL = "http://localhost:5000";
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, "");
@@ -35,13 +37,19 @@ export async function request<T>(
   fallbackMessage = "No se pudo completar la solicitud."
 ): Promise<T> {
   try {
+    const headers = new Headers(options.headers);
+    if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    const token = getAuthToken();
+    if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
       ...options,
+      headers,
     });
+
+    if (response.status === 401 && path !== "/api/auth/login") {
+      window.dispatchEvent(new Event("centro-medico:unauthorized"));
+    }
 
     return await parseResponse<T>(response, fallbackMessage);
   } catch (error) {

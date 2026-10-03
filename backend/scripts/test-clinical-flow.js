@@ -2,16 +2,30 @@ require("dotenv").config({ quiet: true });
 
 const app = require("../src/app");
 const pool = require("../src/config/db");
+const { ensureSchema } = require("../schema");
+const bcrypt = require("bcryptjs");
+const assert = require("node:assert/strict");
 
 let patientId = null;
+let doctorId = null;
+let userId = null;
+let productId = null;
 
 async function cleanup() {
-  if (!patientId) return;
+  if (productId) {
+    await pool.query("DELETE FROM movimientos_productos WHERE id_producto=$1", [productId]);
+    await pool.query("DELETE FROM productos WHERE id=$1", [productId]);
+  }
+  if (patientId) {
+  await pool.query("DELETE FROM documentos_paciente WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM pagos WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM cargos_paciente WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM visitas_medicas WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM citas WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM pacientes WHERE id_paciente=$1", [patientId]);
+  }
+  if (userId) await pool.query("DELETE FROM usuarios WHERE id_usuario=$1", [userId]);
+  if (doctorId) await pool.query("DELETE FROM medicos WHERE id_medico=$1", [doctorId]);
 }
 
 async function main() {
@@ -21,10 +35,30 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${port}`;
 
   try {
-    const doctor = (
-      await pool.query("SELECT id_medico FROM medicos ORDER BY id_medico LIMIT 1")
-    ).rows[0];
-    if (!doctor) throw new Error("Se necesita al menos un medico para la prueba.");
+    await ensureSchema(pool);
+    const marker = require("node:crypto").randomUUID();
+    const password = require("node:crypto").randomUUID();
+    const email = `test-${marker}@example.invalid`;
+    const user = await pool.query(
+      "INSERT INTO usuarios (nombre,email,password,rol,activo) VALUES ($1,$2,$3,'admin',TRUE) RETURNING id_usuario",
+      ["PRUEBA TEMPORAL", email, await bcrypt.hash(password, 4)]
+    );
+    userId = user.rows[0].id_usuario;
+    const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    assert.equal(loginResponse.status, 200, "El usuario temporal debe poder iniciar sesion");
+    const { token } = await loginResponse.json();
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const anonymousResponse = await fetch(`${baseUrl}/api/triajes`);
+    assert.equal(anonymousResponse.status, 401, "Triaje debe requerir autenticacion");
+    const doctor = (await pool.query(
+      "INSERT INTO medicos (nombre,especialidad,licencia) VALUES ($1,$2,$3) RETURNING id_medico",
+      ["MEDICO TEMPORAL", "Medicina general", marker]
+    )).rows[0];
+    doctorId = doctor.id_medico;
 
     const patient = await pool.query(
       `INSERT INTO pacientes (
@@ -50,7 +84,7 @@ async function main() {
 
     const triageResponse = await fetch(`${baseUrl}/api/triajes`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         id_cita: appointmentId,
         motivo_consulta: "Fiebre alta y dolor abdominal",
@@ -69,7 +103,7 @@ async function main() {
 
     const visitResponse = await fetch(`${baseUrl}/api/visitas`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         id_cita: appointmentId,
         id_paciente: patientId,
@@ -98,6 +132,41 @@ async function main() {
     });
     const visit = await visitResponse.json();
     if (!visitResponse.ok) throw new Error(JSON.stringify(visit));
+    assert.equal(visit.impresion_clinica, "Sindrome febril en estudio");
+    assert.equal(visit.id_paciente, patientId);
+    assert.ok(triage.id_triaje, "Debe persistir el triaje");
+    const productResponse = await fetch(`${baseUrl}/api/productos`, {
+      method: "POST", headers,
+      body: JSON.stringify({ tipo: "farmacia", codigo: marker, nombre: "PRODUCTO TEMPORAL", categoria: "Prueba", unidad: "unidad", stock: 5, minimo: 1, precio: 2 }),
+    });
+    assert.equal(productResponse.status, 201);
+    productId = (await productResponse.json()).id;
+    const movementUrl = `${baseUrl}/api/productos/${productId}/movimientos`;
+    const concurrent = await Promise.all([1,2].map(() => fetch(movementUrl, {
+      method: "POST", headers, body: JSON.stringify({ tipo: "salida", cantidad: 4, motivo: "Prueba concurrente" }),
+    })));
+    assert.deepEqual(concurrent.map(r=>r.status).sort(), [201,409], "Debe evitar sobreventa concurrente");
+    const stock = (await pool.query("SELECT stock FROM productos WHERE id=$1", [productId])).rows[0].stock;
+    assert.equal(stock, 1);
+    const content = Buffer.from("Documento temporal de prueba").toString("base64");
+    const docResponse = await fetch(`${baseUrl}/api/documentos`, {
+      method: "POST", headers, body: JSON.stringify({id_paciente:patientId,nombre:"prueba.txt",tipo:"text/plain",contenido:content}),
+    });
+    assert.equal(docResponse.status,201);
+    const docId=(await docResponse.json()).id;
+    const savedDoc=await fetch(`${baseUrl}/api/documentos/${docId}`,{headers});
+    assert.equal(savedDoc.status,200);
+    assert.equal((await savedDoc.json()).contenido,content,"El archivo debe conservar sus bytes");
+    await pool.query("UPDATE usuarios SET rol='fundacion' WHERE id_usuario=$1", [userId]);
+    const forbidden = await fetch(movementUrl, { method: "POST", headers, body: JSON.stringify({ tipo: "entrada", cantidad: 1, motivo: "No permitido" }) });
+    assert.equal(forbidden.status, 403, "Fundacion solo puede consultar inventario");
+    const forbiddenDoc=await fetch(`${baseUrl}/api/documentos/${docId}`,{headers});
+    assert.equal(forbiddenDoc.status,403,"Fundacion no debe descargar documentos clinicos");
+    const dashboard = await fetch(`${baseUrl}/api/dashboard/resumen`, { headers });
+    assert.equal(dashboard.status, 200);
+    const summary = await dashboard.json();
+    assert.equal(summary.citas_por_mes.length, 6);
+    assert.ok(summary.citas_por_mes.some(m => m.citas >= 1));
 
     console.log(
       JSON.stringify(

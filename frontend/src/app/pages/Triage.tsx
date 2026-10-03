@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import { fetchAppointments, type AppointmentRecord } from "../api/appointments";
 import { fetchTriages, saveTriage, type TriageRecord } from "../api/triage";
 import type { ClinicalPriority } from "../api/analysis";
@@ -285,7 +286,9 @@ export default function Triage() {
                   </div>
                   <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{triage?.motivo_consulta || appointment.motivo || "Sin motivo registrado"}</p>
                   {triage && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">P/A {triage.presion_arterial || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">FC {triage.frecuencia_cardiaca || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">T {triage.temperatura || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">SpO2 {triage.saturacion_oxigeno || "-"}%</span></div>}
-                  <button type="button" onClick={() => setSelected(appointment)} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"><HeartPulse className="h-4 w-4" />{triage ? "Actualizar triaje" : "Registrar triaje"}</button>
+                  <Can module="triage" action="edit">
+                    <button type="button" onClick={() => setSelected(appointment)} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"><HeartPulse className="h-4 w-4" />{triage ? "Actualizar triaje" : "Registrar triaje"}</button>
+                  </Can>
                 </article>
               );
             })}

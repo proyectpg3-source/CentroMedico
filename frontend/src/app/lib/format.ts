@@ -70,3 +70,33 @@ export function toTimeInputValue(value?: string | null) {
 export function toDateTimePayload(date: string, time: string) {
   return new Date(`${date}T${time || "00:00"}:00`).toISOString();
 }
+
+export function waitColor(minutes: number | string | null | undefined) {
+  const value = numericValue(minutes);
+  if (value >= 30) return "text-red-600";
+  if (value >= 15) return "text-amber-600";
+  return "text-slate-500";
+}
+
+export function formatDuration(minutes: number | string | null | undefined) {
+  const value = numericValue(minutes);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return "Inactivo";
+  }
+
+  const totalMinutes = Math.round(value);
+  const ONE_DAY_MINUTES = 24 * 60;
+
+  if (totalMinutes >= ONE_DAY_MINUTES) {
+    return "> 24 h";
+  }
+
+  if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+    return remainingMinutes > 0 ? `${hours} h ${remainingMinutes} min` : `${hours} h`;
+  }
+
+  return `${totalMinutes} min`;
+}

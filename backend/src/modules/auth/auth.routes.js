@@ -56,6 +56,10 @@ router.patch("/usuarios/:id/activo", requireAuth, requireRole("admin"), async (r
       return res.status(400).json({ message: "ID de usuario invalido." });
     }
 
+    if (id === req.usuario.id_usuario && req.body.activo === false) {
+      return res.status(400).json({ message: "No puedes desactivar tu propia cuenta." });
+    }
+
     const usuario = await authService.toggleActivo(id, req.body.activo);
     return res.json(usuario);
   } catch (error) {

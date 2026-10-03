@@ -1,0 +1,68 @@
+/* Bootstrap base plus an explicit bridge for the existing React components.
+   Estas reglas dan al area administrativa (.clinic-shell) una apariencia
+   sobria: bordes discretos y sombras suaves. Los COLORES vienen siempre de
+   los tokens de theme.css (verde esmeralda / navy institucional), nunca de
+   valores de Bootstrap; el login usa su propio diseño y no depende de este
+   archivo. */
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+
+.clinic-shell :where(.shadow-sm,.shadow-lg,.shadow-xl,.shadow-2xl){box-shadow:none}
+
+.clinic-shell [data-slot="card"],
+.clinic-shell main .bg-white.border{
+  border-color:var(--border);
+  border-radius:12px;
+  box-shadow:0 2px 6px rgba(15,23,42,.04);
+}
+.clinic-shell [data-slot="card-header"]{
+  border-bottom:1px solid var(--border);
+  padding-bottom:1rem;
+}
+.clinic-shell [data-slot="button"]{
+  border-radius:8px;
+  box-shadow:none;
+  transition:background-color .15s,border-color .15s;
+}
+.clinic-shell [data-slot="button"][data-variant="outline"]{
+  border-color:var(--border);
+  color:var(--muted-foreground);
+}
+.clinic-shell [data-slot="button"][data-variant="outline"]:hover{
+  background:var(--muted);
+}
+.clinic-shell :where([data-slot="input"],[data-slot="textarea"],[data-slot="select-trigger"]){
+  background:var(--input-background);
+  border-color:var(--border);
+  border-radius:8px;
+  box-shadow:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+.clinic-shell :where([data-slot="input"],[data-slot="textarea"],[data-slot="select-trigger"]):focus-visible{
+  border-color:var(--ring);
+  outline:2px solid color-mix(in srgb, var(--ring) 25%, transparent);
+  outline-offset:1px;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--ring) 12%, transparent);
+}
+.clinic-shell [data-slot="table-head"]{
+  background:var(--muted);
+  color:var(--muted-foreground);
+  font-weight:600;
+}
+.clinic-shell [data-slot="table-cell"]{
+  border-bottom:1px solid var(--border);
+}
+.clinic-shell header{
+  box-shadow:none;
+  backdrop-filter:none;
+}
+[data-slot="dialog-content"],[data-slot="alert-dialog-content"]{
+  border-radius:14px;
+  border-color:var(--border);
+}
+
+/* Menu lateral: hover suave; el estado activo ya lo pinta Sidebar.tsx con
+   los tokens sidebar-primary/sidebar-accent (verde), sin pisarlo aqui. */
+.clinic-shell aside{border-right:1px solid var(--sidebar-border)}
+.clinic-shell aside nav a{border-radius:8px;transition:background-color .15s,border-color .15s}
+.clinic-shell aside nav a:not([aria-current="page"]):hover{background:var(--sidebar-accent)}
+.clinic-shell aside nav p{letter-spacing:.08em}

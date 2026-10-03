@@ -1,28 +1,47 @@
-import { NavLink } from "react-router";
 import {
-  Activity,
   BarChart3,
-  BrainCircuit,
+  Boxes,
   CalendarDays,
-  ClipboardPlus,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
+  ClipboardPlus,
   CreditCard,
   FileText,
   FlaskConical,
+  FolderOpen,
   HeartPulse,
   LayoutDashboard,
   LogOut,
+  Package,
   PanelLeftClose,
   Pill,
+  ReceiptText,
   Settings,
   ShieldCheck,
   Stethoscope,
+  Syringe,
   Users,
 } from "lucide-react";
+import { NavLink } from "react-router";
+import { useAuth } from "../../auth/AuthContext";
+import { canAccess, ROLE_LABELS } from "../../auth/roles";
 import { useLayoutChrome } from "./LayoutContext";
 
-const navigation = [
+interface NavItem {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  badge?: string;
+  badgeColor?: string;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navigation: NavGroup[] = [
   {
     label: "Resumen",
     items: [{ to: "/", icon: LayoutDashboard, label: "Dashboard" }],
@@ -31,24 +50,35 @@ const navigation = [
     label: "Gestion clinica",
     items: [
       { to: "/patients", icon: Users, label: "Pacientes" },
+      { to: "/recepcion", icon: ClipboardCheck, label: "Recepción" },
       { to: "/appointments", icon: CalendarDays, label: "Citas medicas" },
-      { to: "/triage", icon: ClipboardPlus, label: "Triaje" },
+      { to: "/triage", icon: ClipboardPlus, label: "Triaje", badge: "2", badgeColor: "bg-red-500" },
       { to: "/doctors", icon: Stethoscope, label: "Doctores" },
       { to: "/records", icon: FileText, label: "Expedientes" },
+      { to: "/documentos", icon: FolderOpen, label: "Documentos" },
     ],
   },
   {
     label: "Operacion",
     items: [
       { to: "/laboratory", icon: FlaskConical, label: "Laboratorio" },
+      { to: "/inventory", icon: Package, label: "Inventario" },
+      { to: "/inventario-general", icon: Boxes, label: "Insumos Médicos" },
+      { to: "/farmacia", icon: Syringe, label: "Farmacia" },
       { to: "/prescriptions", icon: Pill, label: "Prescripciones" },
-      { to: "/billing", icon: CreditCard, label: "Cuentas y pagos" },
-      { to: "/prioritization", icon: BrainCircuit, label: "Priorizacion" },
+      { to: "/prioritization", icon: ClipboardCheck, label: "Priorización" },
       { to: "/reports", icon: BarChart3, label: "Reportes" },
       { to: "/settings", icon: Settings, label: "Configuracion" },
     ],
   },
-] as const;
+  {
+    label: "Finanzas",
+    items: [
+      { to: "/billing", icon: CreditCard, label: "Cuentas y pagos" },
+      { to: "/facturacion", icon: ReceiptText, label: "Facturación SAT" },
+    ],
+  },
+];
 
 export function Sidebar() {
   const {
@@ -57,9 +87,18 @@ export function Sidebar() {
     toggleSidebar,
     closeMobileSidebar,
   } = useLayoutChrome();
+  const { user, logout } = useAuth();
+
+  const initials = (user?.nombre || "Usuario")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <>
+      {/* Backdrop para navegacion movil */}
       <div
         className={`fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
           isMobileSidebarOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
@@ -68,20 +107,21 @@ export function Sidebar() {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-y-auto overflow-x-hidden bg-[#0c1a36] text-white shadow-2xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground shadow-2xl transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
           isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ width: isSidebarCollapsed ? "88px" : "280px" }}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-5">
+        {/* Header con Marca */}
+        <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-5">
           <div className="flex min-w-0 items-center gap-3 overflow-hidden">
-            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-950/30">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md bg-sidebar-primary">
               <HeartPulse className="h-5 w-5 text-white" />
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-white">Centro Medico La Aurora</p>
-                <p className="truncate text-xs text-blue-200/80">Sistema clinico integral</p>
+                <p className="truncate text-xs text-sidebar-foreground/70">Sistema clinico integral</p>
               </div>
             )}
           </div>
@@ -90,7 +130,7 @@ export function Sidebar() {
             <button
               type="button"
               onClick={toggleSidebar}
-              className="hidden h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-blue-100 transition-colors hover:bg-white/10 lg:flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent lg:flex"
               aria-label={isSidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
             >
               {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -98,7 +138,7 @@ export function Sidebar() {
             <button
               type="button"
               onClick={closeMobileSidebar}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-blue-100 transition-colors hover:bg-white/10 lg:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent lg:hidden"
               aria-label="Cerrar menu lateral"
             >
               <PanelLeftClose className="h-4 w-4" />
@@ -106,78 +146,101 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div className="px-4 pt-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-            <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-3"}`}>
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
-                <Activity className="h-5 w-5" />
-              </div>
-              {!isSidebarCollapsed && (
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white">Operacion estable</p>
-                  <p className="text-xs text-blue-200/80">Flujo clinico conectado a backend</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
+        {/* Menu de Navegacion */}
         <nav className="flex-1 px-3 py-4">
           <div className="space-y-5">
-            {navigation.map((group) => (
-              <div key={group.label}>
-                {!isSidebarCollapsed && (
-                  <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-200/55">
-                    {group.label}
-                  </p>
-                )}
-                <ul className="space-y-1">
-                  {group.items.map((item) => (
-                    <li key={item.to}>
-                      <NavLink
-                        to={item.to}
-                        end={item.to === "/"}
-                        onClick={closeMobileSidebar}
-                        className={({ isActive }) =>
-                          `group flex items-center rounded-xl border px-3 py-2.5 text-sm transition-all ${
-                            isActive
-                              ? "border-blue-400/35 bg-blue-500/18 text-white shadow-sm"
-                              : "border-transparent text-blue-100/80 hover:border-white/10 hover:bg-white/10 hover:text-white"
-                          } ${isSidebarCollapsed ? "justify-center" : "justify-between"}`
-                        }
-                        title={isSidebarCollapsed ? item.label : undefined}
-                      >
-                        <div className={`flex min-w-0 items-center ${isSidebarCollapsed ? "" : "gap-3"}`}>
-                          <item.icon className="h-4 w-4 flex-shrink-0" />
-                          {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
-                        </div>
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {navigation.map((group) => {
+              const accessibleItems = group.items.filter((item) => canAccess(user?.rol, item.to));
+              if (accessibleItems.length === 0) return null;
+
+              return (
+                <div key={group.label}>
+                  {!isSidebarCollapsed && (
+                    <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/50">
+                      {group.label}
+                    </p>
+                  )}
+                  <ul className="space-y-1">
+                    {accessibleItems.map((item) => (
+                      <li key={item.to}>
+                        <NavLink
+                          to={item.to}
+                          end={item.to === "/"}
+                          onClick={closeMobileSidebar}
+                          className={({ isActive }) =>
+                            `group flex items-center rounded-md border px-3 py-2.5 text-sm transition-all ${
+                              isActive
+                                ? "border-sidebar-primary/40 bg-sidebar-primary/20 text-white shadow-sm"
+                                : "border-transparent text-sidebar-foreground/75 hover:border-sidebar-border hover:bg-sidebar-accent hover:text-white"
+                            } ${isSidebarCollapsed ? "justify-center" : "justify-between"}`
+                          }
+                          title={isSidebarCollapsed ? item.label : undefined}
+                        >
+                          <div className={`flex min-w-0 flex-1 items-center ${isSidebarCollapsed ? "justify-center" : "gap-3"}`}>
+                            <item.icon className="h-4 w-4 flex-shrink-0" />
+                            {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                          </div>
+                          {!isSidebarCollapsed && item.badge && (
+                            <span
+                              className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-medium text-white ${
+                                item.badgeColor || "bg-sidebar-primary"
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         </nav>
 
-        <div className="mt-auto border-t border-white/10 px-4 py-4">
+        {/* Seccion de Usuario / Logout accesible en ambos modos */}
+        <div className="mt-auto border-t border-sidebar-border px-4 py-4">
           <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-3"}`}>
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm shadow-blue-950/25">
-              LA
-            </div>
-            {!isSidebarCollapsed && (
+            {isSidebarCollapsed ? (
+              <button
+                type="button"
+                onClick={logout}
+                className="group relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground shadow-sm transition-transform hover:scale-105"
+                title="Cerrar sesión"
+                aria-label="Cerrar sesión"
+              >
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user?.nombre} className="h-full w-full rounded-full object-cover" />
+                ) : (
+                  initials
+                )}
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/70 opacity-0 transition-opacity group-hover:opacity-100">
+                  <LogOut className="h-4 w-4 text-white" />
+                </div>
+              </button>
+            ) : (
               <>
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground shadow-sm shadow-black/25 overflow-hidden">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user?.nombre} className="h-full w-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">Panel administrativo</p>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-blue-200/70">
+                  <p className="truncate text-sm font-medium text-white">{user?.nombre}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-sidebar-foreground/70">
                     <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="truncate">Control y monitoreo</span>
+                    <span className="truncate">{user ? ROLE_LABELS[user.rol] : "Sesión activa"}</span>
                   </div>
                 </div>
                 <button
                   type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-blue-100/80 transition-colors hover:bg-white/10 hover:text-white"
+                  onClick={logout}
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-white"
                   aria-label="Cerrar sesion"
+                  title="Cerrar sesión"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>

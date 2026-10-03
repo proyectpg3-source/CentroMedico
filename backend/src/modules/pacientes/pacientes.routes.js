@@ -1,8 +1,10 @@
 const express = require("express");
+const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
 const svc = require("./pacientes.service");
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get("/", async (req, res) => {
   try {
@@ -24,7 +26,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req, res) => {
   try {
     const data = svc.sanitize(req.body);
     if (!svc.validate(data, res)) return;
@@ -34,7 +36,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireRole("admin", "recepcionista", "enfermero"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "paciente");
@@ -48,7 +50,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireRole("admin"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "paciente");

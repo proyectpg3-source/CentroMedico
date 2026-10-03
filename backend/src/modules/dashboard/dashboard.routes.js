@@ -1,8 +1,10 @@
 const express = require("express");
+const { requireAuth } = require("../../middlewares/auth.middleware");
 const { handleDatabaseError } = require("../../utils/validators");
 const { getResumen } = require("./dashboard.service");
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get("/resumen", async (req, res) => {
   try {

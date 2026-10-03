@@ -1,0 +1,200 @@
+[
+  {
+    "id": "A1",
+    "name": "Inventario de avances y alcance",
+    "start": "2026-09-22",
+    "end": "2026-09-22",
+    "h": 2,
+    "dep": "",
+    "deliver": "Matriz de avances y alcance",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "A2",
+    "name": "Cronograma y recursos",
+    "start": "2026-09-23",
+    "end": "2026-09-23",
+    "h": 2,
+    "dep": "A1",
+    "deliver": "Plan con dependencias y horas",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "A3",
+    "name": "Arquitectura y clases",
+    "start": "2026-09-24",
+    "end": "2026-09-24",
+    "h": 2,
+    "dep": "A2",
+    "deliver": "Diagramas y contratos",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "A4",
+    "name": "UX y evidencias del prototipo",
+    "start": "2026-09-25",
+    "end": "2026-09-25",
+    "h": 2,
+    "dep": "A3",
+    "deliver": "Capturas y guion de demostración",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "A5",
+    "name": "Revisión técnica y formato",
+    "start": "2026-09-26",
+    "end": "2026-09-26",
+    "h": 2,
+    "dep": "A4",
+    "deliver": "Word revisado y lista de cotejo",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "A6",
+    "name": "Ensayo y entrega académica",
+    "start": "2026-09-27",
+    "end": "2026-09-27",
+    "h": 2,
+    "dep": "A5",
+    "deliver": "Documento y prototipo presentados",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B1",
+    "name": "Unificar permisos y contratos",
+    "start": "2026-09-28",
+    "end": "2026-09-30",
+    "h": 6,
+    "dep": "A6",
+    "deliver": "Matriz frontend y backend consistente",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B2",
+    "name": "Pacientes médicos y citas",
+    "start": "2026-09-30",
+    "end": "2026-10-02",
+    "h": 6,
+    "dep": "B1",
+    "deliver": "Altas y edición comprobadas por rol",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B3",
+    "name": "Recepción triaje y consulta",
+    "start": "2026-10-05",
+    "end": "2026-10-07",
+    "h": 8,
+    "dep": "B2",
+    "deliver": "Flujo clínico integral comprobado",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B4",
+    "name": "Pruebas del flujo clínico",
+    "start": "2026-10-09",
+    "end": "2026-10-09",
+    "h": 4,
+    "dep": "B3",
+    "deliver": "Casos negativos y correcciones",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B5",
+    "name": "Laboratorio farmacia y cargos",
+    "start": "2026-10-12",
+    "end": "2026-10-14",
+    "h": 8,
+    "dep": "B4",
+    "deliver": "Dispensación vinculada a paciente y cargo",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B6",
+    "name": "Documentos e inventario",
+    "start": "2026-10-16",
+    "end": "2026-10-16",
+    "h": 4,
+    "dep": "B5",
+    "deliver": "Edición y consulta de historial verificadas",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B7",
+    "name": "Pagos y reportes",
+    "start": "2026-10-19",
+    "end": "2026-10-21",
+    "h": 8,
+    "dep": "B6",
+    "deliver": "Saldos y reportes conciliados",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B8",
+    "name": "Configuración y usuarios",
+    "start": "2026-10-23",
+    "end": "2026-10-23",
+    "h": 4,
+    "dep": "B7",
+    "deliver": "Preferencias y usuarios persistentes",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B9",
+    "name": "Despliegue de demostración",
+    "start": "2026-10-26",
+    "end": "2026-10-28",
+    "h": 8,
+    "dep": "B8",
+    "deliver": "Sitio HTTPS accesible desde otra red",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B10",
+    "name": "Respaldo y controles de acceso",
+    "start": "2026-10-30",
+    "end": "2026-10-30",
+    "h": 4,
+    "dep": "B9",
+    "deliver": "Restauración y permisos comprobados",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B11",
+    "name": "Pruebas de aceptación",
+    "start": "2026-11-02",
+    "end": "2026-11-04",
+    "h": 8,
+    "dep": "B10",
+    "deliver": "Flujos aprobados y defectos corregidos",
+    "status": "Pendiente",
+    "actual": 0
+  },
+  {
+    "id": "B12",
+    "name": "Documentación y reserva final",
+    "start": "2026-11-06",
+    "end": "2026-11-06",
+    "h": 4,
+    "dep": "B11",
+    "deliver": "Manual final y margen de correcciones",
+    "status": "Pendiente",
+    "actual": 0
+  }
+]

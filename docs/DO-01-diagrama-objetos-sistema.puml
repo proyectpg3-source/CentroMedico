@@ -1,0 +1,75 @@
+@startuml
+
+title DO-01 - Diagrama de objetos del sistema
+
+skinparam backgroundColor white
+skinparam objectBackgroundColor white
+skinparam objectBorderColor black
+skinparam ArrowColor black
+skinparam defaultFontSize 9
+skinparam shadowing false
+
+object "paciente01 : Paciente" as Paciente {
+    idPaciente = 001
+    nombre = Paciente registrado
+    estado = Activo
+}
+
+object "atencion01 : Atencion" as Atencion {
+    idAtencion = 001
+    motivoConsulta = Registrado
+    estado = En atencion
+    fecha = Fecha actual
+}
+
+object "evaluacion01 : EvaluacionInicial" as Evaluacion {
+    idEvaluacion = 001
+    signosVitales = Registrados
+    observaciones = Registradas
+    estado = Completa
+}
+
+object "prioridad01 : Prioridad" as Prioridad {
+    idPrioridad = 001
+    nivel = Asignado
+    origen = Sistema
+    estado = Vigente
+}
+
+object "cola01 : ColaAtencion" as Cola {
+    idCola = 001
+    posicion = Asignada
+    estado = En espera
+}
+
+object "historia01 : HistoriaClinica" as Historia {
+    idHistoria = 001
+    paciente = paciente01
+    estado = Actualizada
+}
+
+object "consulta01 : ConsultaMedica" as Consulta {
+    idConsulta = 001
+    impresionClinica = Registrada
+    tratamiento = Registrado
+    estado = Finalizada
+}
+
+object "estudio01 : EstudioClinico" as Estudio {
+    idEstudio = 001
+    tipo = Solicitado
+    resultado = Pendiente / registrado
+    estado = Vigente
+}
+
+Paciente -- Atencion : posee
+Atencion -- Evaluacion : incluye
+Evaluacion -- Prioridad : origina
+Prioridad -- Cola : determina posicion
+
+Paciente -- Historia : mantiene
+Atencion -- Consulta : genera
+Consulta -- Historia : actualiza
+Consulta -- Estudio : puede solicitar
+
+@enduml

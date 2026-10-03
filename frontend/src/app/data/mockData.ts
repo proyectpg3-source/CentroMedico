@@ -536,4 +536,318 @@ export const chartData = {
     { name: "Pediatría", value: 18, color: "#f59e0b" },
     { name: "Cirugía", value: 7, color: "#ef4444" },
   ],
+  incomeByMonth: [
+    { mes: "Nov", ingresos: 185000, egresos: 92000 },
+    { mes: "Dic", ingresos: 172000, egresos: 88000 },
+    { mes: "Ene", ingresos: 198000, egresos: 95000 },
+    { mes: "Feb", ingresos: 176000, egresos: 90000 },
+    { mes: "Mar", ingresos: 215000, egresos: 101000 },
+    { mes: "Abr", ingresos: 224000, egresos: 108000 },
+  ],
 };
+
+// ─── Cuentas de paciente / Caja ──────────────────────────────────────────
+
+export interface AccountItem {
+  id: string;
+  description: string;
+  category: "consulta" | "laboratorio" | "farmacia" | "procedimiento" | "otro";
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PatientAccount {
+  id: string;
+  patientId: string;
+  patientName: string;
+  date: string;
+  items: AccountItem[];
+  totalAmount: number;
+  paid: number;
+  pending: number;
+  status: "open" | "partial" | "paid" | "invoiced";
+}
+
+export const patientAccounts: PatientAccount[] = [
+  {
+    id: "acc1",
+    patientId: "p2",
+    patientName: "Camila Vásquez",
+    date: "2026-04-13",
+    items: [
+      { id: "ai1", description: "Consulta Medicina General", category: "consulta", quantity: 1, unitPrice: 150, total: 150 },
+      { id: "ai2", description: "Hemograma completo", category: "laboratorio", quantity: 1, unitPrice: 85, total: 85 },
+    ],
+    totalAmount: 235,
+    paid: 0,
+    pending: 235,
+    status: "open",
+  },
+  {
+    id: "acc2",
+    patientId: "p7",
+    patientName: "Jorge Espinoza",
+    date: "2026-04-14",
+    items: [
+      { id: "ai3", description: "Ecocardiograma de control", category: "procedimiento", quantity: 1, unitPrice: 450, total: 450 },
+    ],
+    totalAmount: 450,
+    paid: 450,
+    pending: 0,
+    status: "paid",
+  },
+  {
+    id: "acc3",
+    patientId: "p6",
+    patientName: "Francisca Muñoz",
+    date: "2026-04-12",
+    items: [
+      { id: "ai4", description: "Consulta Medicina General", category: "consulta", quantity: 1, unitPrice: 150, total: 150 },
+      { id: "ai5", description: "Sulfato Ferroso 300mg (caja)", category: "farmacia", quantity: 1, unitPrice: 45, total: 45 },
+    ],
+    totalAmount: 195,
+    paid: 100,
+    pending: 95,
+    status: "partial",
+  },
+  {
+    id: "acc4",
+    patientId: "p1",
+    patientName: "Roberto Fuentes",
+    date: "2026-04-10",
+    items: [
+      { id: "ai6", description: "Consulta Cardiología de control", category: "consulta", quantity: 1, unitPrice: 180, total: 180 },
+      { id: "ai7", description: "Enalapril 10mg (caja)", category: "farmacia", quantity: 1, unitPrice: 60, total: 60 },
+    ],
+    totalAmount: 240,
+    paid: 240,
+    pending: 0,
+    status: "invoiced",
+  },
+];
+
+// ─── Facturación SAT (FEL) ────────────────────────────────────────────────
+
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  series: string;
+  patientId: string;
+  patientName: string;
+  patientNit: string;
+  date: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  iva: number;
+  total: number;
+  status: "draft" | "issued" | "cancelled" | "annulled";
+  satAuthorization?: string;
+  satUuid?: string;
+  paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "cheque";
+}
+
+export const invoices: Invoice[] = [
+  {
+    id: "inv1",
+    invoiceNumber: "000001",
+    series: "A",
+    patientId: "p1",
+    patientName: "Roberto Fuentes",
+    patientNit: "CF",
+    date: "2026-04-10",
+    items: [
+      { description: "Consulta Cardiología de control", quantity: 1, unitPrice: 180, total: 180 },
+      { description: "Enalapril 10mg (caja)", quantity: 1, unitPrice: 60, total: 60 },
+    ],
+    subtotal: 240,
+    iva: 28.8,
+    total: 268.8,
+    status: "issued",
+    satAuthorization: "3F8A2C1D-7B4E-4A9F-9C2D-1E5F6A7B8C9D",
+    satUuid: "9A8B7C6D5E4F3A2B1C0D9E8F7A6B5C4D",
+    paymentMethod: "tarjeta",
+  },
+  {
+    id: "inv2",
+    invoiceNumber: "000002",
+    series: "A",
+    patientId: "p7",
+    patientName: "Jorge Espinoza",
+    patientNit: "4455667-8",
+    date: "2026-04-14",
+    items: [{ description: "Ecocardiograma de control", quantity: 1, unitPrice: 450, total: 450 }],
+    subtotal: 450,
+    iva: 54,
+    total: 504,
+    status: "issued",
+    satAuthorization: "1B2C3D4E-5F6A-7B8C-9D0E-1F2A3B4C5D6E",
+    satUuid: "5D4C3B2A1F0E9D8C7B6A5F4E3D2C1B0A",
+    paymentMethod: "transferencia",
+  },
+  {
+    id: "inv3",
+    invoiceNumber: "000003",
+    series: "A",
+    patientId: "p2",
+    patientName: "Camila Vásquez",
+    patientNit: "CF",
+    date: "2026-04-13",
+    items: [
+      { description: "Consulta Medicina General", quantity: 1, unitPrice: 150, total: 150 },
+      { description: "Hemograma completo", quantity: 1, unitPrice: 85, total: 85 },
+    ],
+    subtotal: 235,
+    iva: 28.2,
+    total: 263.2,
+    status: "draft",
+    paymentMethod: "efectivo",
+  },
+  {
+    id: "inv4",
+    invoiceNumber: "000004",
+    series: "A",
+    patientId: "p3",
+    patientName: "Sebastián Torres",
+    patientNit: "1122334-5",
+    date: "2026-04-08",
+    items: [{ description: "Resonancia magnética cerebral", quantity: 1, unitPrice: 620, total: 620 }],
+    subtotal: 620,
+    iva: 74.4,
+    total: 694.4,
+    status: "annulled",
+    satAuthorization: "7A6B5C4D-3E2F-1A0B-9C8D-7E6F5A4B3C2D",
+    satUuid: "2C1B0A9F8E7D6C5B4A3F2E1D0C9B8A7F",
+    paymentMethod: "tarjeta",
+  },
+];
+
+// ─── Farmacia ──────────────────────────────────────────────────────────────
+
+export interface PharmacyItem {
+  id: string;
+  code: string;
+  name: string;
+  genericName: string;
+  category: string;
+  stock: number;
+  minStock: number;
+  price: number;
+  expiryDate: string;
+  controlled: boolean;
+}
+
+export const pharmacyItems: PharmacyItem[] = [
+  { id: "ph1", code: "MED-001", name: "Paracetamol 500mg", genericName: "Paracetamol", category: "Analgésico", stock: 340, minStock: 100, price: 3.5, expiryDate: "2027-06-01", controlled: false },
+  { id: "ph2", code: "MED-002", name: "Ibuprofeno 400mg", genericName: "Ibuprofeno", category: "Antiinflamatorio", stock: 25, minStock: 50, price: 4.0, expiryDate: "2026-11-15", controlled: false },
+  { id: "ph3", code: "MED-003", name: "Amoxicilina 500mg", genericName: "Amoxicilina", category: "Antibiótico", stock: 180, minStock: 60, price: 6.25, expiryDate: "2026-09-20", controlled: false },
+  { id: "ph4", code: "MED-004", name: "Tramadol 50mg", genericName: "Tramadol", category: "Analgésico Opioide", stock: 40, minStock: 30, price: 12.0, expiryDate: "2027-01-10", controlled: true },
+  { id: "ph5", code: "MED-005", name: "Diazepam 10mg", genericName: "Diazepam", category: "Ansiolítico", stock: 15, minStock: 20, price: 8.5, expiryDate: "2026-08-05", controlled: true },
+  { id: "ph6", code: "MED-006", name: "Solución Salina 0.9% 1000mL", genericName: "Cloruro de sodio", category: "Soluciones IV", stock: 95, minStock: 40, price: 18.0, expiryDate: "2027-03-01", controlled: false },
+  { id: "ph7", code: "MED-007", name: "Loratadina 10mg", genericName: "Loratadina", category: "Antihistamínico", stock: 210, minStock: 50, price: 2.75, expiryDate: "2027-05-12", controlled: false },
+  { id: "ph8", code: "MED-008", name: "Insulina Glargina", genericName: "Insulina glargina", category: "Antidiabético", stock: 12, minStock: 15, price: 145.0, expiryDate: "2026-07-30", controlled: false },
+];
+
+// ─── Inventario de insumos médicos ─────────────────────────────────────────
+
+export interface InventoryItem {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  stock: number;
+  minStock: number;
+  unit: string;
+  cost: number;
+  supplier: string;
+  lastRestock: string;
+  location: string;
+}
+
+export const inventoryItems: InventoryItem[] = [
+  { id: "inv1", code: "INV-001", name: "Guantes de nitrilo (caja 100)", category: "Protección", stock: 45, minStock: 30, unit: "caja", cost: 55.0, supplier: "Distribuidora Médica GT", lastRestock: "2026-08-20", location: "Bodega A" },
+  { id: "inv2", code: "INV-002", name: "Mascarillas quirúrgicas (caja 50)", category: "Protección", stock: 8, minStock: 20, unit: "caja", cost: 28.0, supplier: "Suministros Salud SA", lastRestock: "2026-07-15", location: "Bodega A" },
+  { id: "inv3", code: "INV-003", name: "Jeringas 5mL", category: "Inyectable", stock: 320, minStock: 150, unit: "unidad", cost: 1.2, supplier: "MediSupply GT", lastRestock: "2026-08-25", location: "Bodega B" },
+  { id: "inv4", code: "INV-004", name: "Agujas hipodérmicas 21G", category: "Inyectable", stock: 12, minStock: 100, unit: "unidad", cost: 0.45, supplier: "MediSupply GT", lastRestock: "2026-06-30", location: "Bodega B" },
+  { id: "inv5", code: "INV-005", name: "Gasas estériles 10x10", category: "Curación", stock: 60, minStock: 40, unit: "paquete", cost: 12.5, supplier: "Distribuidora Médica GT", lastRestock: "2026-08-10", location: "Bodega A" },
+  { id: "inv6", code: "INV-006", name: "Alcohol en gel 1L", category: "Antiséptico", stock: 25, minStock: 20, unit: "botella", cost: 22.0, supplier: "Suministros Salud SA", lastRestock: "2026-08-01", location: "Bodega C" },
+  { id: "inv7", code: "INV-007", name: "Termómetros digitales", category: "Instrumental", stock: 18, minStock: 10, unit: "unidad", cost: 35.0, supplier: "Equipos Médicos GT", lastRestock: "2026-05-20", location: "Bodega C" },
+  { id: "inv8", code: "INV-008", name: "Esparadrapo hipoalergénico", category: "Curación", stock: 5, minStock: 15, unit: "rollo", cost: 8.0, supplier: "Distribuidora Médica GT", lastRestock: "2026-07-05", location: "Bodega A" },
+];
+
+// ─── Documentos médicos ─────────────────────────────────────────────────
+
+export interface MedicalDocument {
+  id: string;
+  patientId: string;
+  patientName: string;
+  uploadDate: string;
+  documentType: string;
+  fileName: string;
+  fileType: "pdf" | "doc" | "docx" | "jpg" | "png" | "xlsx";
+  fileSize: string;
+  uploadedBy: string;
+  examType: string;
+  description: string;
+  tags: string[];
+}
+
+export const medicalDocuments: MedicalDocument[] = [
+  { id: "doc1", patientId: "p2", patientName: "Camila Vásquez", uploadDate: "2026-04-10", documentType: "Resultado de Laboratorio", fileName: "hemograma_camila_20260410.pdf", fileType: "pdf", fileSize: "1.2 MB", uploadedBy: "Laboratorio Central", examType: "Hemograma completo", description: "Resultado hemograma de control mensual.", tags: ["hemograma", "control"] },
+  { id: "doc2", patientId: "p1", patientName: "Roberto Fuentes", uploadDate: "2026-04-10", documentType: "Electrocardiograma", fileName: "ecg_roberto_20260410.jpg", fileType: "jpg", fileSize: "3.4 MB", uploadedBy: "Dra. María González", examType: "Electrocardiograma (ECG)", description: "ECG de control post crisis hipertensiva.", tags: ["ecg", "cardiologia"] },
+  { id: "doc3", patientId: "p3", patientName: "Sebastián Torres", uploadDate: "2026-04-15", documentType: "Imagen Diagnóstica", fileName: "rmn_sebastian_20260415.png", fileType: "png", fileSize: "8.1 MB", uploadedBy: "Imagenología", examType: "Resonancia magnética", description: "RMN cerebral de seguimiento por Parkinson.", tags: ["rmn", "neurologia"] },
+  { id: "doc4", patientId: "p6", patientName: "Francisca Muñoz", uploadDate: "2026-04-12", documentType: "Historia Clínica", fileName: "historia_francisca_20260412.docx", fileType: "docx", fileSize: "0.5 MB", uploadedBy: "Dra. Laura Soto", examType: "Perfil lipídico", description: "Actualización de historia clínica.", tags: ["historia"] },
+  { id: "doc5", patientId: "p7", patientName: "Jorge Espinoza", uploadDate: "2026-04-14", documentType: "Consentimiento Informado", fileName: "consentimiento_jorge_20260414.pdf", fileType: "pdf", fileSize: "0.3 MB", uploadedBy: "Recepción", examType: "Ecocardiograma", description: "Consentimiento para ecocardiograma de control.", tags: ["consentimiento"] },
+  { id: "doc6", patientId: "p2", patientName: "Camila Vásquez", uploadDate: "2026-04-01", documentType: "Certificado Médico", fileName: "certificado_camila_20260401.xlsx", fileType: "xlsx", fileSize: "0.2 MB", uploadedBy: "Dra. Laura Soto", examType: "Uroanálisis", description: "Certificado médico para empleador.", tags: ["certificado"] },
+];
+
+// ─── Triaje de Emergencias ─────────────────────────────────────────────────
+
+export interface TriagePatient {
+  id: string;
+  code: string;
+  patientName: string;
+  motive: string;
+  priority: "ROJO" | "NARANJA" | "AMARILLO" | "VERDE";
+  ingreso: string;
+  waitMinutes: number;
+  status: "waiting" | "in-attention" | "done";
+}
+
+export const triagePatients: TriagePatient[] = [
+  { id: "t1", code: "EMG-0098", patientName: "María Xitumul Ren", motive: "Dolor torácico intenso, sudoración", priority: "ROJO", ingreso: "09:15", waitMinutes: 5, status: "in-attention" },
+  { id: "t2", code: "EMG-0099", patientName: "Carlos Say Batz", motive: "Fractura expuesta de antebrazo tras caída", priority: "NARANJA", ingreso: "09:40", waitMinutes: 12, status: "waiting" },
+  { id: "t3", code: "EMG-0100", patientName: "Elena Choc Ical", motive: "Cefalea leve, control de presión", priority: "VERDE", ingreso: "09:55", waitMinutes: 18, status: "waiting" },
+];
+
+// ─── Pagos e ingresos ───────────────────────────────────────────────────
+
+export interface Payment {
+  id: string;
+  date: string;
+  patientName: string;
+  concept: string;
+  method: "efectivo" | "tarjeta" | "transferencia" | "cheque" | "seguro";
+  amount: number;
+  status: "completed" | "pending" | "refunded";
+  cashierId: string;
+  reference?: string;
+}
+
+export const payments: Payment[] = [
+  { id: "pay1", date: "2026-04-13", patientName: "Roberto Fuentes", concept: "Consulta Cardiología", method: "tarjeta", amount: 180, status: "completed", cashierId: "Ana López", reference: "AUTH-5521" },
+  { id: "pay2", date: "2026-04-13", patientName: "Camila Vásquez", concept: "Consulta Medicina General + Laboratorio", method: "efectivo", amount: 235, status: "pending", cashierId: "Ana López" },
+  { id: "pay3", date: "2026-04-14", patientName: "Jorge Espinoza", concept: "Ecocardiograma de control", method: "transferencia", amount: 450, status: "completed", cashierId: "Luis Ramos", reference: "TRX-88213" },
+  { id: "pay4", date: "2026-04-12", patientName: "Francisca Muñoz", concept: "Consulta + Sulfato Ferroso", method: "efectivo", amount: 100, status: "completed", cashierId: "Ana López" },
+  { id: "pay5", date: "2026-04-12", patientName: "Miguel Herrera", concept: "Fisioterapia post operatoria", method: "seguro", amount: 320, status: "completed", cashierId: "Luis Ramos", reference: "IGSS-33210" },
+  { id: "pay6", date: "2026-04-08", patientName: "Sebastián Torres", concept: "Resonancia magnética cerebral", method: "tarjeta", amount: 620, status: "pending", cashierId: "Ana López" },
+  { id: "pay7", date: "2026-04-09", patientName: "Andrea Castillo", concept: "Consulta Neurología", method: "cheque", amount: 160, status: "completed", cashierId: "Luis Ramos", reference: "CHQ-004521" },
+  { id: "pay8", date: "2026-04-08", patientName: "Javiera Contreras", concept: "Control pediátrico + vacuna", method: "efectivo", amount: 90, status: "refunded", cashierId: "Ana López" },
+];

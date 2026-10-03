@@ -1,8 +1,10 @@
 const express = require("express");
+const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
 const svc = require("./visitas.service");
 
 const router = express.Router();
+router.use(requireAuth);
 
 router.get("/", async (req, res) => {
   try { res.json(await svc.getAll(req.query)); }
@@ -19,7 +21,7 @@ router.get("/:id", async (req, res) => {
   } catch (error) { handleDatabaseError(error, res, "Error al obtener la visita."); }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireRole("admin", "medico"), async (req, res) => {
   try {
     const data = svc.sanitize(req.body);
     if (!svc.validate(data, res)) return;
@@ -30,7 +32,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireRole("admin", "medico"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "visita");

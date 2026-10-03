@@ -11,6 +11,10 @@ function buildDateWithOffset(dayOffset, hour, minute) {
   return date;
 }
 
+function buildDateOnlyWithOffset(dayOffset) {
+  return buildDateWithOffset(dayOffset, 12, 0).toISOString().slice(0, 10);
+}
+
 async function seedPacientesIfEmpty(client) {
   const existingPatients = await client.query(
     "SELECT id_paciente FROM pacientes ORDER BY id_paciente"
@@ -591,6 +595,68 @@ async function seedClinicalFlowIfEmpty(client) {
   };
 }
 
+async function seedInsumosIfEmpty(client) {
+  const existingInsumos = await client.query("SELECT id_insumo FROM insumos_laboratorio LIMIT 1");
+  if (existingInsumos.rowCount > 0) {
+    return 0;
+  }
+
+  const insumos = [
+    {
+      nombre: "Tubos Vacutainer tapa roja",
+      categoria: "Toma de muestra",
+      unidad: "unidad",
+      stock: 120,
+      stock_minimo: 40,
+      fecha_vencimiento: buildDateOnlyWithOffset(240),
+    },
+    {
+      nombre: "Reactivo de glucosa",
+      categoria: "Quimica clinica",
+      unidad: "ml",
+      stock: 8,
+      stock_minimo: 20,
+      fecha_vencimiento: buildDateOnlyWithOffset(35),
+    },
+    {
+      nombre: "Tiras reactivas de orina",
+      categoria: "Uroanalisis",
+      unidad: "tira",
+      stock: 0,
+      stock_minimo: 30,
+      fecha_vencimiento: buildDateOnlyWithOffset(-12),
+    },
+  ];
+
+  for (const insumo of insumos) {
+    const inserted = await client.query(
+      `INSERT INTO insumos_laboratorio
+         (nombre, categoria, unidad, stock, stock_minimo, fecha_vencimiento, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING id_insumo`,
+      [
+        insumo.nombre,
+        insumo.categoria,
+        insumo.unidad,
+        insumo.stock,
+        insumo.stock_minimo,
+        insumo.fecha_vencimiento,
+      ]
+    );
+
+    if (insumo.stock > 0) {
+      await client.query(
+        `INSERT INTO movimientos_insumos_laboratorio
+           (id_insumo, tipo, cantidad, motivo, id_usuario, created_at)
+         VALUES ($1, 'entrada', $2, $3, NULL, NOW())`,
+        [inserted.rows[0].id_insumo, insumo.stock, "Carga inicial de demostracion."]
+      );
+    }
+  }
+
+  return insumos.length;
+}
+
 async function main() {
   const client = await pool.connect();
 
@@ -602,6 +668,7 @@ async function main() {
     const medicos = await seedMedicosIfEmpty(client);
     const citasCreadas = await seedCitasIfEmpty(client, pacientes, medicos);
     const clinicalFlow = await seedClinicalFlowIfEmpty(client);
+    const insumosCreados = await seedInsumosIfEmpty(client);
 
     await client.query("COMMIT");
 
@@ -612,6 +679,7 @@ async function main() {
           medicos: medicos.length,
           citas_creadas: citasCreadas,
           ...clinicalFlow,
+          insumos_creados: insumosCreados,
           message: "Seed completado correctamente.",
         },
         null,

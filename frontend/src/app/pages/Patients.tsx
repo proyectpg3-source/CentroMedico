@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { Can } from "../auth/usePermissions";
 import {
   createPatient,
   fetchPatients,
@@ -646,16 +647,18 @@ export default function Patients() {
             />
           </div>
 
-          <button
-            onClick={() => {
-              setSubmitError(null);
-              setPatientForm({ mode: "create", patient: null });
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700 transition-colors ml-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Paciente
-          </button>
+          <Can module="patients" action="create">
+            <button
+              onClick={() => {
+                setSubmitError(null);
+                setPatientForm({ mode: "create", patient: null });
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700 transition-colors ml-auto"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Paciente
+            </button>
+          </Can>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -746,27 +749,31 @@ export default function Patients() {
                                     <Eye className="w-4 h-4" />
                                     Ver ficha
                                   </button>
-                                  <button
-                                    onClick={() => {
-                                      setSubmitError(null);
-                                      setPatientForm({ mode: "edit", patient });
-                                      setOpenMenu(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                    Editar
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setPatientToDelete(patient);
-                                      setOpenMenu(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Eliminar
-                                  </button>
+                                  <Can module="patients" action="edit">
+                                    <button
+                                      onClick={() => {
+                                        setSubmitError(null);
+                                        setPatientForm({ mode: "edit", patient });
+                                        setOpenMenu(null);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                      Editar
+                                    </button>
+                                  </Can>
+                                  <Can module="patients" action="delete">
+                                    <button
+                                      onClick={() => {
+                                        setPatientToDelete(patient);
+                                        setOpenMenu(null);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Eliminar
+                                    </button>
+                                  </Can>
                                 </div>
                               )}
                             </div>

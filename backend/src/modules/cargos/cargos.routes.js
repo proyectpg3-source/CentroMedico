@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const pool = require("../../config/db");
 const { getTrimmedString, getOptionalId, parseEntityId, sendInvalidId, handleDatabaseError, parsePagination, buildPaginatedResponse } = require("../../utils/validators");
 const { fetchChargeById } = require("../../utils/cargosService");
@@ -32,6 +33,8 @@ async function getAll(query) {
 }
 
 const router = express.Router();
+router.use(requireAuth);
+router.use(requireRole("admin", "recepcionista", "fundacion"));
 
 router.get("/", async (req, res) => {
   try { res.json(await getAll(req.query)); }
