@@ -20,9 +20,18 @@
 - Definir con el usuario si Facturación SAT y Predicción IA son académicas o integraciones reales. Las pantallas existentes aún usan simulaciones; no representan facturas certificadas ni un modelo predictivo validado.
 - Revisar el ciclo completo de pacientes, médicos y citas usando sus formularios y cada rol.
 - Completar verificación funcional de recepción, laboratorio, prescripciones, cuentas y pagos, reportes y configuración.
-- Farmacia: la salida registrada descuenta stock; falta vincular dispensaciones con prescripciones, paciente y cargos. El catálogo nuevo no incluye edición de datos del producto ni control específico de medicamentos regulados.
+- Farmacia: ~~vincular dispensaciones con prescripciones, paciente y cargos~~ (hecho el 3 de octubre de 2026, ver abajo). Falta edición de datos del producto y control específico de medicamentos regulados; tampoco hay devolución/anulación de una dispensación.
 - Documentos: falta vista previa y edición de metadatos; las descargas se comprobaron por API, no por selector de archivos del navegador.
 - Revisar configuración persistente, avisos y permisos específicos de reportes; existen secciones de configuración provisionales.
 - Revisar paginación en listados y selectores para bases de datos grandes.
 
 La base local estaba vacía al iniciar. No se cargaron pacientes ni productos de demostración.
+
+## Actualización — 3 de octubre de 2026: Farmacia ↔ Prescripciones
+
+- La prescripción puede vincularse a un producto del catálogo de farmacia con una cantidad. En ese caso el servidor calcula el costo (cantidad × precio unitario) y el cargo del paciente usa ese valor; sin producto se conserva el costo manual.
+- `POST /api/prescripciones/:id/dispensar` (admin, enfermería): admite entregas parciales, impide dispensar más de lo prescrito, productos vencidos o sin existencias, y serializa dispensaciones simultáneas de la misma receta. Cada salida queda en `movimientos_productos` con `id_prescripcion` y en auditoría.
+- No se permite cambiar el producto ni reducir la cantidad por debajo de lo ya dispensado.
+- Farmacia muestra "Prescripciones por dispensar"; Prescripciones muestra el estado (pendiente, parcial, dispensada).
+- Médicos pueden consultar (no modificar) el catálogo de productos para prescribir.
+- `npm run test:clinical` cubre el flujo completo, incluida la concurrencia; pasa.

@@ -2,7 +2,8 @@ const express = require('express');
 const pool = require('../../config/db');
 const { requireAuth, requireRole } = require('../../middlewares/auth.middleware');
 const router = express.Router();
-router.use(requireAuth, requireRole('admin', 'enfermero', 'fundacion'));
+// Medicos solo consultan el catalogo para vincular prescripciones; las escrituras exigen admin/enfermero.
+router.use(requireAuth, requireRole('admin', 'enfermero', 'fundacion', 'medico'));
 
 function fail(message, status = 400) { return Object.assign(new Error(message), { status }); }
 function integer(value, minimum = 0) {

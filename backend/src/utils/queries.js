@@ -80,11 +80,21 @@ const RESULTADO_SELECT = `
   LEFT JOIN medicos cm ON cm.id_medico = c.id_medico
 `;
 
+// Las salidas de farmacia se guardan con cantidad negativa.
+const DISPENSED_QUANTITY = `
+  COALESCE((SELECT -SUM(mp.cantidad) FROM movimientos_productos mp
+            WHERE mp.id_prescripcion = pr.id_prescripcion), 0)::int
+`;
+
 const PRESCRIPTION_SELECT = `
   SELECT
     pr.id_prescripcion, pr.id_visita, pr.medicamento, pr.dosis,
     pr.frecuencia, pr.duracion, pr.instrucciones, pr.costo,
     pr.created_at, pr.updated_at,
+    pr.id_producto, pr.cantidad,
+    prod.nombre AS producto_nombre, prod.codigo AS producto_codigo,
+    prod.unidad AS producto_unidad, prod.stock AS producto_stock,
+    ${DISPENSED_QUANTITY} AS cantidad_dispensada,
     v.id_paciente, v.id_medico, v.fecha_visita,
     p.nombre AS paciente_nombre, p.dni AS paciente_dni,
     m.nombre AS medico_nombre, m.especialidad AS medico_especialidad
@@ -92,6 +102,7 @@ const PRESCRIPTION_SELECT = `
   INNER JOIN visitas_medicas v ON v.id_visita = pr.id_visita
   INNER JOIN pacientes p ON p.id_paciente = v.id_paciente
   INNER JOIN medicos m ON m.id_medico = v.id_medico
+  LEFT JOIN productos prod ON prod.id = pr.id_producto
 `;
 
 const CARGO_SELECT = `
@@ -124,6 +135,7 @@ module.exports = {
   VISITA_SELECT,
   LAB_ORDER_SELECT,
   RESULTADO_SELECT,
+  DISPENSED_QUANTITY,
   PRESCRIPTION_SELECT,
   CARGO_SELECT,
   PAGO_SELECT,

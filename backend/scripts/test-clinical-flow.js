@@ -12,10 +12,7 @@ let userId = null;
 let productId = null;
 
 async function cleanup() {
-  if (productId) {
-    await pool.query("DELETE FROM movimientos_productos WHERE id_producto=$1", [productId]);
-    await pool.query("DELETE FROM productos WHERE id=$1", [productId]);
-  }
+  // Primero el paciente: sus prescripciones referencian al producto.
   if (patientId) {
   await pool.query("DELETE FROM documentos_paciente WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM pagos WHERE id_paciente=$1", [patientId]);
@@ -23,6 +20,10 @@ async function cleanup() {
   await pool.query("DELETE FROM visitas_medicas WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM citas WHERE id_paciente=$1", [patientId]);
   await pool.query("DELETE FROM pacientes WHERE id_paciente=$1", [patientId]);
+  }
+  if (productId) {
+    await pool.query("DELETE FROM movimientos_productos WHERE id_producto=$1", [productId]);
+    await pool.query("DELETE FROM productos WHERE id=$1", [productId]);
   }
   if (userId) await pool.query("DELETE FROM usuarios WHERE id_usuario=$1", [userId]);
   if (doctorId) await pool.query("DELETE FROM medicos WHERE id_medico=$1", [doctorId]);
@@ -148,6 +149,38 @@ async function main() {
     assert.deepEqual(concurrent.map(r=>r.status).sort(), [201,409], "Debe evitar sobreventa concurrente");
     const stock = (await pool.query("SELECT stock FROM productos WHERE id=$1", [productId])).rows[0].stock;
     assert.equal(stock, 1);
+
+    // Prescripcion vinculada a farmacia: costo desde catalogo y dispensacion parcial.
+    await fetch(movementUrl, { method: "POST", headers, body: JSON.stringify({ tipo: "entrada", cantidad: 5, motivo: "Reposicion de prueba" }) });
+    const prescriptionResponse = await fetch(`${baseUrl}/api/prescripciones`, {
+      method: "POST", headers,
+      body: JSON.stringify({ id_visita: visit.id_visita, medicamento: "PRODUCTO TEMPORAL", dosis: "1 tableta", frecuencia: "Cada 8 horas", duracion: "2 dias", id_producto: productId, cantidad: 4, costo: 999 }),
+    });
+    const prescription = await prescriptionResponse.json();
+    assert.equal(prescriptionResponse.status, 201, JSON.stringify(prescription));
+    assert.equal(Number(prescription.costo), 8, "El costo debe calcularse como cantidad x precio");
+    const charge = (await pool.query("SELECT total FROM cargos_paciente WHERE referencia_tipo='prescripcion' AND referencia_id=$1", [prescription.id_prescripcion])).rows[0];
+    assert.equal(Number(charge.total), 8, "El cargo debe reflejar el costo del catalogo");
+    const dispenseUrl = `${baseUrl}/api/prescripciones/${prescription.id_prescripcion}/dispensar`;
+    const partial = await fetch(dispenseUrl, { method: "POST", headers, body: JSON.stringify({ cantidad: 3 }) });
+    assert.equal(partial.status, 201);
+    assert.equal((await partial.json()).cantidad_dispensada, 3);
+    const excess = await fetch(dispenseUrl, { method: "POST", headers, body: JSON.stringify({ cantidad: 5 }) });
+    assert.equal(excess.status, 409, "No debe dispensar mas de lo prescrito");
+    const shrink = await fetch(`${baseUrl}/api/prescripciones/${prescription.id_prescripcion}`, {
+      method: "PUT", headers,
+      body: JSON.stringify({ id_visita: visit.id_visita, medicamento: "PRODUCTO TEMPORAL", dosis: "1 tableta", frecuencia: "Cada 8 horas", duracion: "2 dias", id_producto: productId, cantidad: 2 }),
+    });
+    assert.equal(shrink.status, 409, "No debe reducir la cantidad por debajo de lo dispensado");
+    const rest = await Promise.all([1,2].map(() => fetch(dispenseUrl, { method: "POST", headers, body: "{}" })));
+    assert.deepEqual(rest.map(r=>r.status).sort(), [201,409], "Debe evitar doble dispensacion concurrente");
+    const stockAfter = (await pool.query("SELECT stock FROM productos WHERE id=$1", [productId])).rows[0].stock;
+    assert.equal(stockAfter, 2, "La dispensacion debe descontar exactamente lo prescrito");
+    const linked = await pool.query("SELECT COUNT(*)::int AS n FROM movimientos_productos WHERE id_prescripcion=$1", [prescription.id_prescripcion]);
+    assert.equal(linked.rows[0].n, 2, "Cada dispensacion debe quedar ligada a la prescripcion");
+    const pending = await (await fetch(`${baseUrl}/api/prescripciones?pendientes_dispensar=1&id_paciente=${patientId}`, { headers })).json();
+    assert.equal(pending.data.length, 0, "Una prescripcion completa no debe figurar como pendiente");
+
     const content = Buffer.from("Documento temporal de prueba").toString("base64");
     const docResponse = await fetch(`${baseUrl}/api/documentos`, {
       method: "POST", headers, body: JSON.stringify({id_paciente:patientId,nombre:"prueba.txt",tipo:"text/plain",contenido:content}),

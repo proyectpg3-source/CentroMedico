@@ -455,6 +455,11 @@ const SCHEMA_STATEMENTS = [
     id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );`,
+  `ALTER TABLE prescripciones ADD COLUMN IF NOT EXISTS id_producto INTEGER REFERENCES productos(id) ON DELETE RESTRICT;`,
+  `ALTER TABLE prescripciones ADD COLUMN IF NOT EXISTS cantidad INTEGER CHECK (cantidad > 0);`,
+  `ALTER TABLE movimientos_productos ADD COLUMN IF NOT EXISTS id_prescripcion INTEGER REFERENCES prescripciones(id_prescripcion) ON DELETE SET NULL;`,
+  `CREATE INDEX IF NOT EXISTS idx_movimientos_productos_prescripcion
+    ON movimientos_productos(id_prescripcion) WHERE id_prescripcion IS NOT NULL;`,
 ];
 
 async function ensureSchema(pool) {

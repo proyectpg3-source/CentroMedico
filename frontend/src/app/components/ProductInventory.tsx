@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Header } from "./layout/Header";
 import { useAuth } from "../auth/AuthContext";
 import { request } from "../api/client";
@@ -9,7 +9,7 @@ const empty = { codigo: '', nombre: '', categoria: '', unidad: '', proveedor: ''
 const inputClass = 'w-full rounded-lg border border-slate-300 p-2 text-sm';
 const buttonClass = 'rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50';
 
-export default function ProductInventory({ tipo }: { tipo: 'inventario' | 'farmacia' }) {
+export default function ProductInventory({ tipo, reloadKey = 0, children }: { tipo: 'inventario' | 'farmacia'; reloadKey?: number; children?: ReactNode }) {
   const { user } = useAuth();
   const writable = user?.rol === 'admin' || user?.rol === 'enfermero';
   const [items, setItems] = useState<Product[]>([]);
@@ -29,7 +29,7 @@ export default function ProductInventory({ tipo }: { tipo: 'inventario' | 'farma
     try { setItems(await request<Product[]>(`/api/productos?tipo=${tipo}`)); }
     finally { setLoading(false); }
   }
-  useEffect(() => { load().catch(e => setError(e.message)); }, [tipo]);
+  useEffect(() => { load().catch(e => setError(e.message)); }, [tipo, reloadKey]);
   async function save(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
     try {
@@ -60,6 +60,7 @@ export default function ProductInventory({ tipo }: { tipo: 'inventario' | 'farma
       {error && <div role="alert" className="rounded-xl bg-red-50 p-3 text-red-700">{error}</div>}
       {notice && <div role="status" className="rounded-xl bg-green-50 p-3 text-green-800">{notice}</div>}
       <div className="grid gap-4 sm:grid-cols-3">{[['Productos',items.length],['Stock bajo',items.filter(p=>p.stock<=p.minimo).length],['Valor de existencias',new Intl.NumberFormat('es-GT',{style:'currency',currency:'GTQ'}).format(items.reduce((n,p)=>n+p.stock*p.precio,0))]].map(([label,value])=><div key={label} className="rounded-xl border bg-white p-4"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl">{loading ? '…' : value}</p></div>)}</div>
+      {children}
       <div className="flex flex-wrap items-center gap-3">
         <input aria-label="Buscar productos" className={`${inputClass} max-w-sm`} placeholder="Buscar por nombre, código o categoría" value={search} onChange={e=>setSearch(e.target.value)} />
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={lowOnly} onChange={e=>setLowOnly(e.target.checked)} /> Solo stock bajo</label>

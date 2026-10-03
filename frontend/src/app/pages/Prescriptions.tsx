@@ -3,7 +3,11 @@ import { Header } from "../components/layout/Header";
 import { Can } from "../auth/usePermissions";
 import {
   createPrescription,
+  fetchPharmacyProducts,
   fetchPrescriptions,
+  DISPENSATION_LABELS,
+  getDispensationStatus,
+  type PharmacyProduct,
   type PrescriptionRecord,
 } from "../api/prescriptions";
 import { fetchVisits, type VisitRecord } from "../api/visits";
@@ -31,6 +35,8 @@ interface PrescriptionFormState {
   duracion: string;
   instrucciones: string;
   costo: string;
+  id_producto: string;
+  cantidad: string;
 }
 
 function buildFormState(): PrescriptionFormState {
@@ -42,23 +48,30 @@ function buildFormState(): PrescriptionFormState {
     duracion: "",
     instrucciones: "",
     costo: "150",
+    id_producto: "",
+    cantidad: "1",
   };
 }
 
 function PrescriptionFormModal({
   visits,
+  products,
   onClose,
   onSubmit,
   isSubmitting,
   errorMessage,
 }: {
   visits: VisitRecord[];
+  products: PharmacyProduct[];
   onClose: () => void;
   onSubmit: (form: PrescriptionFormState) => void;
   isSubmitting: boolean;
   errorMessage: string | null;
 }) {
   const [form, setForm] = useState<PrescriptionFormState>(() => buildFormState());
+  const product = products.find((item) => String(item.id) === form.id_producto) ?? null;
+  // Con producto vinculado el servidor fija el costo; aqui solo se muestra.
+  const catalogCost = product ? (Number(form.cantidad) || 0) * product.precio : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
@@ -113,6 +126,52 @@ function PrescriptionFormModal({
             </select>
           </div>
 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_140px]">
+            <div>
+              <label className="text-sm font-medium text-slate-700">Producto de farmacia</label>
+              <select
+                value={form.id_producto}
+                onChange={(event) => {
+                  const selected = products.find((item) => String(item.id) === event.target.value);
+                  setForm((current) => ({
+                    ...current,
+                    id_producto: event.target.value,
+                    medicamento: selected ? selected.nombre : current.medicamento,
+                  }));
+                }}
+                className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="">No dispensar desde farmacia (costo manual)</option>
+                {products.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nombre} ({item.codigo}) - {item.stock} {item.unidad} - {formatCurrency(item.precio)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {product && (
+              <div>
+                <label className="text-sm font-medium text-slate-700">Cantidad *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={form.cantidad}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, cantidad: event.target.value }))
+                  }
+                  className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
+            )}
+          </div>
+          {product && Number(form.cantidad) > product.stock && (
+            <p className="text-sm text-amber-700">
+              Existencia actual: {product.stock} {product.unidad}. Farmacia podra dispensar de forma parcial.
+            </p>
+          )}
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-slate-700">Medicamento *</label>
@@ -126,13 +185,16 @@ function PrescriptionFormModal({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Costo *</label>
+              <label className="text-sm font-medium text-slate-700">
+                Costo *{catalogCost !== null && " (calculado desde el catalogo)"}
+              </label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 required
-                value={form.costo}
+                readOnly={catalogCost !== null}
+                value={catalogCost !== null ? catalogCost.toFixed(2) : form.costo}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, costo: event.target.value }))
                 }
@@ -215,6 +277,7 @@ function PrescriptionFormModal({
 export default function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState<PrescriptionRecord[]>([]);
   const [visits, setVisits] = useState<VisitRecord[]>([]);
+  const [products, setProducts] = useState<PharmacyProduct[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -228,13 +291,16 @@ export default function Prescriptions() {
       setLoading(true);
       setError(null);
 
-      const [prescriptionsResponse, visitsResponse] = await Promise.all([
+      const [prescriptionsResponse, visitsResponse, productsResponse] = await Promise.all([
         fetchPrescriptions(undefined, signal),
         fetchVisits(undefined, signal),
+        // Sin catalogo se puede seguir prescribiendo con costo manual.
+        fetchPharmacyProducts(signal).catch(() => [] as PharmacyProduct[]),
       ]);
 
       setPrescriptions(prescriptionsResponse);
       setVisits(visitsResponse);
+      setProducts(productsResponse);
     } catch (loadError) {
       if (signal?.aborted) {
         return;
@@ -299,6 +365,8 @@ export default function Prescriptions() {
         duracion: form.duracion.trim(),
         instrucciones: form.instrucciones.trim() || null,
         costo: Number(form.costo),
+        id_producto: form.id_producto ? Number(form.id_producto) : null,
+        cantidad: form.id_producto ? Number(form.cantidad) : null,
       });
 
       setShowCreateModal(false);
@@ -433,6 +501,17 @@ export default function Prescriptions() {
                       <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
                         Visita #{prescription.id_visita}
                       </span>
+                      {(() => {
+                        const status = DISPENSATION_LABELS[getDispensationStatus(prescription)];
+                        return (
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${status.className}`}>
+                            {status.label}
+                            {prescription.cantidad
+                              ? ` · ${prescription.cantidad_dispensada}/${prescription.cantidad}`
+                              : ""}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <h3 className="mt-3 text-lg font-semibold text-slate-900">
                       {prescription.medicamento}
@@ -494,6 +573,7 @@ export default function Prescriptions() {
       {showCreateModal && (
         <PrescriptionFormModal
           visits={visits}
+          products={products}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreate}
           isSubmitting={isSubmitting}

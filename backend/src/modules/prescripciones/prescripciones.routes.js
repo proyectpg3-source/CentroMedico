@@ -1,6 +1,7 @@
 const express = require("express");
 const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
+const { logAuditEvent } = require("../../services/audit");
 const svc = require("./prescripciones.service");
 
 const router = express.Router();
@@ -44,6 +45,23 @@ router.put("/:id", requireRole("admin", "medico"), async (req, res) => {
   } catch (error) {
     if (error.status) return res.status(error.status).json({ message: error.message });
     handleDatabaseError(error, res, "Error al actualizar la prescripcion.");
+  }
+});
+
+router.post("/:id/dispensar", requireRole("admin", "enfermero"), async (req, res) => {
+  try {
+    const id = parseEntityId(req.params.id);
+    if (!id) return sendInvalidId(res, "prescripcion");
+    const result = await svc.dispense(id, req.body || {}, req.usuario);
+    await logAuditEvent({
+      usuario: req.usuario, accion: "dispensar", entidad: "prescripcion", idEntidad: id,
+      descripcion: `Dispensadas ${result.cantidad} unidades de ${result.prescripcion.producto_nombre}`,
+      metadata: { id_producto: result.prescripcion.id_producto, cantidad: result.cantidad },
+    });
+    res.status(201).json(result.prescripcion);
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    handleDatabaseError(error, res, "Error al dispensar la prescripcion.");
   }
 });
 
