@@ -1,4 +1,5 @@
-import { request, unwrapList, type PaginatedResponse } from "./client";
+import { API_BASE_URL, request, unwrapList, type PaginatedResponse } from "./client";
+import { getAuthToken } from "../auth/storage";
 
 export type ChargeOrigin = "consulta" | "laboratorio" | "farmacia";
 export type ChargeStatus = "pendiente" | "parcial" | "pagado";
@@ -113,4 +114,23 @@ export function createPayment(payload: PaymentPayload) {
     },
     "No se pudo registrar el pago."
   );
+}
+export async function fetchAccountStatementPdf(idPaciente: number): Promise<Blob> {
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE_URL}/api/cargos/estado-cuenta/${idPaciente}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!response.ok) {
+    let message = "No se pudo generar el estado de cuenta.";
+    try {
+      const data = await response.json();
+      if (data && typeof data.message === "string") message = data.message;
+    } catch {
+      // la respuesta no era JSON; se usa el mensaje por defecto
+    }
+    throw new Error(message);
+  }
+
+  return response.blob();
 }

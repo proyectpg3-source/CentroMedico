@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { Root } from "./components/layout/Root";
 import Dashboard from "./pages/Dashboard";
+import QuickCare from "./pages/QuickCare";
 import Patients from "./pages/Patients";
 import Appointments from "./pages/Appointments";
 import Doctors from "./pages/Doctors";
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
         Component: Root,
         children: [
           { index: true, Component: Dashboard },
+          { element: <RequireRole allowed={MODULE_ACCESS["/atencion-rapida"]} />, children: [{ path: "atencion-rapida", Component: QuickCare }] },
           { path: "forbidden", Component: Forbidden },
           { path: "account", Component: Account },
           { element: <RequireRole allowed={MODULE_ACCESS["/patients"]} />, children: [{ path: "patients", Component: Patients }] },

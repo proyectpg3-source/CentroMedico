@@ -19,7 +19,7 @@ async function requireAuth(req, res, next) {
 
   let payload;
   try {
-    payload = jwt.verify(token, getJwtSecret());
+    payload = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({

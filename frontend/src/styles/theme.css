@@ -2,7 +2,7 @@
 
 :root {
   --font-size: 16px;
-  --background: #f1f8f5;
+  --background: #f3f6f7;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -10,7 +10,7 @@
   --popover-foreground: #0f172a;
 
   /* Marca: verde esmeralda medico */
-  --primary: #059669;
+  --primary: #047857;
   --primary-foreground: #ffffff;
 
   --secondary: #f1f5f9;
@@ -204,12 +204,4 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
-}
-/* Apariencia sobria para el área administrativa; el acceso conserva su diseño. */
-.clinic-shell :where(.rounded-xl, .rounded-2xl, .rounded-3xl) {
-  border-radius: 0.375rem;
-}
-
-.clinic-shell :where(.shadow-sm, .shadow-lg) {
-  box-shadow: none;
 }

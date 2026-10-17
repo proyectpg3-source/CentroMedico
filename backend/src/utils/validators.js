@@ -10,8 +10,9 @@ function getOptionalString(value) {
 }
 
 function parseEntityId(value) {
-  const id = Number.parseInt(value, 10);
-  return Number.isInteger(id) && id > 0 ? id : null;
+  if (typeof value !== "number" && (typeof value !== "string" || !/^\d+$/.test(value.trim()))) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 function getOptionalId(value) {
@@ -21,6 +22,7 @@ function getOptionalId(value) {
 }
 
 function isValidDateTime(value) {
+  if (!(value instanceof Date) && (typeof value !== "string" || !value.trim())) return false;
   return !Number.isNaN(new Date(value).getTime());
 }
 
@@ -28,7 +30,8 @@ function parseMoney(value, { allowNull = false } = {}) {
   if (value === undefined || value === null || value === "") {
     return allowNull ? null : 0;
   }
-  const parsed = Number.parseFloat(value);
+  if (typeof value !== "number" && (typeof value !== "string" || !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim()))) return null;
+  const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 

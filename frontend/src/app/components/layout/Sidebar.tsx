@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   BarChart3,
   Boxes,
@@ -41,34 +42,33 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navigation: NavGroup[] = [
+export const navigation: NavGroup[] = [
   {
     label: "Resumen",
-    items: [{ to: "/", icon: LayoutDashboard, label: "Dashboard" }],
+    items: [{ to: "/", icon: LayoutDashboard, label: "Vista general" }],
   },
   {
-    label: "Gestion clinica",
+    label: "Atención clínica",
     items: [
+      { to: "/atencion-rapida", icon: HeartPulse, label: "Atención rápida" },
       { to: "/patients", icon: Users, label: "Pacientes" },
       { to: "/recepcion", icon: ClipboardCheck, label: "Recepción" },
-      { to: "/appointments", icon: CalendarDays, label: "Citas medicas" },
-      { to: "/triage", icon: ClipboardPlus, label: "Triaje", badge: "2", badgeColor: "bg-red-500" },
+      { to: "/appointments", icon: CalendarDays, label: "Citas médicas" },
+      { to: "/triage", icon: ClipboardPlus, label: "Triaje" },
+      { to: "/prioritization", icon: ClipboardCheck, label: "Priorización" },
       { to: "/doctors", icon: Stethoscope, label: "Doctores" },
       { to: "/records", icon: FileText, label: "Expedientes" },
       { to: "/documentos", icon: FolderOpen, label: "Documentos" },
     ],
   },
   {
-    label: "Operacion",
+    label: "Operación",
     items: [
       { to: "/laboratory", icon: FlaskConical, label: "Laboratorio" },
-      { to: "/inventory", icon: Package, label: "Inventario" },
-      { to: "/inventario-general", icon: Boxes, label: "Insumos Médicos" },
+      { to: "/inventory", icon: Package, label: "Insumos de laboratorio" },
+      { to: "/inventario-general", icon: Boxes, label: "Inventario general" },
       { to: "/farmacia", icon: Syringe, label: "Farmacia" },
       { to: "/prescriptions", icon: Pill, label: "Prescripciones" },
-      { to: "/prioritization", icon: ClipboardCheck, label: "Priorización" },
-      { to: "/reports", icon: BarChart3, label: "Reportes" },
-      { to: "/settings", icon: Settings, label: "Configuracion" },
     ],
   },
   {
@@ -78,16 +78,44 @@ const navigation: NavGroup[] = [
       { to: "/facturacion", icon: ReceiptText, label: "Facturación SAT" },
     ],
   },
+  {
+    label: "Administración",
+    items: [
+      { to: "/reports", icon: BarChart3, label: "Reportes" },
+      { to: "/settings", icon: Settings, label: "Configuración" },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const {
-    isSidebarCollapsed,
+    isSidebarCollapsed: desktopCollapsed,
     isMobileSidebarOpen,
     toggleSidebar,
     closeMobileSidebar,
   } = useLayoutChrome();
   const { user, logout } = useAuth();
+  const isSidebarCollapsed = desktopCollapsed && !isMobileSidebarOpen;
+  const sidebarRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const sidebar = sidebarRef.current;
+    const focusable = () => Array.from(sidebar?.querySelectorAll<HTMLElement>('a[href], button') ?? [])
+      .filter((element) => element.getClientRects().length > 0);
+    focusable()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileSidebar();
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); previousFocus?.focus(); };
+  }, [isMobileSidebarOpen, closeMobileSidebar]);
 
   const initials = (user?.nombre || "Usuario")
     .split(/\s+/)
@@ -107,7 +135,13 @@ export function Sidebar() {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground shadow-2xl transition-all duration-300 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
+        ref={sidebarRef}
+        role={isMobileSidebarOpen ? "dialog" : undefined}
+        aria-modal={isMobileSidebarOpen ? true : undefined}
+        aria-label="Navegación principal"
+        data-mobile-open={isMobileSidebarOpen}
+        data-collapsed={isSidebarCollapsed}
+        className={`clinic-sidebar fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground shadow-2xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
           isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ width: isSidebarCollapsed ? "88px" : "280px" }}
@@ -120,8 +154,8 @@ export function Sidebar() {
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">Centro Medico La Aurora</p>
-                <p className="truncate text-xs text-sidebar-foreground/70">Sistema clinico integral</p>
+                <p className="text-sm font-semibold text-white">La Aurora</p>
+                <p className="truncate text-xs text-sidebar-foreground/70">Centro médico</p>
               </div>
             )}
           </div>
@@ -165,6 +199,7 @@ export function Sidebar() {
                       <li key={item.to}>
                         <NavLink
                           to={item.to}
+                          aria-label={item.label}
                           end={item.to === "/"}
                           onClick={closeMobileSidebar}
                           className={({ isActive }) =>

@@ -187,7 +187,7 @@ function SupplyModal({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               Guardar
@@ -490,7 +490,7 @@ export default function Inventory() {
                     setModalError(null);
                     setShowSupplyModal(true);
                   }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-700"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4" />
                   Nuevo insumo

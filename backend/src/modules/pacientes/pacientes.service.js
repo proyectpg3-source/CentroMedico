@@ -68,6 +68,18 @@ async function getById(id) {
   return result.rows[0] || null;
 }
 
+async function getOptions(query) {
+  const { page, limit, offset } = parsePagination(query);
+  const search = getTrimmedString(query.q);
+  const params = search ? [`%${search}%`] : [];
+  const where = search ? "WHERE nombre ILIKE $1" : "";
+  const [data, count] = await Promise.all([
+    pool.query(`SELECT id_paciente, nombre FROM pacientes ${where} ORDER BY id_paciente LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, [...params, limit, offset]),
+    pool.query(`SELECT COUNT(*)::int AS total FROM pacientes ${where}`, params),
+  ]);
+  return buildPaginatedResponse(data.rows, count.rows[0].total, page, limit);
+}
+
 async function create(body) {
   const p = sanitize(body);
   const result = await pool.query(
@@ -127,4 +139,4 @@ async function remove(id) {
   return result.rowCount > 0;
 }
 
-module.exports = { sanitize, validate, getAll, getById, create, update, remove };
+module.exports = { sanitize, validate, getAll, getOptions, getById, create, update, remove };

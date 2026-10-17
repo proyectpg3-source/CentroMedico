@@ -14,7 +14,7 @@ router.get("/insumos", async (req, res) => {
   catch (error) { handleDatabaseError(error, res, "Error al obtener los insumos de laboratorio."); }
 });
 
-router.post("/insumos", requireRole("admin", "fundacion"), async (req, res) => {
+router.post("/insumos", requireRole("admin"), async (req, res) => {
   try {
     const data = svc.sanitizeInsumo(req.body);
     if (!svc.validateInsumo(data, res)) return;
@@ -31,7 +31,7 @@ router.post("/insumos", requireRole("admin", "fundacion"), async (req, res) => {
   } catch (error) { handleDatabaseError(error, res, "Error al crear el insumo de laboratorio."); }
 });
 
-router.put("/insumos/:id", requireRole("admin", "fundacion"), async (req, res) => {
+router.put("/insumos/:id", requireRole("admin"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "insumo");
@@ -51,7 +51,7 @@ router.put("/insumos/:id", requireRole("admin", "fundacion"), async (req, res) =
   } catch (error) { handleDatabaseError(error, res, "Error al actualizar el insumo de laboratorio."); }
 });
 
-router.post("/insumos/:id/movimientos", requireRole("admin", "fundacion", "enfermero"), async (req, res) => {
+router.post("/insumos/:id/movimientos", requireRole("admin", "enfermero"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "insumo");
@@ -116,7 +116,7 @@ router.post("/ordenes", requireRole("admin", "medico"), async (req, res) => {
   }
 });
 
-router.put("/ordenes/:id", requireRole("admin", "fundacion"), async (req, res) => {
+router.put("/ordenes/:id", requireRole("admin"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "orden");
@@ -129,7 +129,7 @@ router.put("/ordenes/:id", requireRole("admin", "fundacion"), async (req, res) =
   }
 });
 
-router.patch("/ordenes/:id/estado", requireRole("admin", "medico", "enfermero", "fundacion"), async (req, res) => {
+router.patch("/ordenes/:id/estado", requireRole("admin", "medico", "enfermero"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "orden");
@@ -170,7 +170,7 @@ router.get("/resultados/:id", async (req, res) => {
   } catch (error) { handleDatabaseError(error, res, "Error al obtener el resultado."); }
 });
 
-router.post("/resultados", requireRole("admin", "fundacion"), async (req, res) => {
+router.post("/resultados", requireRole("admin"), async (req, res) => {
   try {
     const data = svc.sanitizeResultado(req.body);
     if (!svc.validateResultado(data, res)) return;
@@ -178,7 +178,7 @@ router.post("/resultados", requireRole("admin", "fundacion"), async (req, res) =
   } catch (error) { handleDatabaseError(error, res, "Error al registrar el resultado."); }
 });
 
-router.put("/resultados/:id", requireRole("admin", "fundacion"), async (req, res) => {
+router.put("/resultados/:id", requireRole("admin"), async (req, res) => {
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "resultado");

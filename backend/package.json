@@ -5,12 +5,19 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js",
+    "dev": "node --watch index.js",
     "db:check": "node scripts/check-db.js",
     "db:seed": "node scripts/seed.js",
     "auth:create-admin": "node scripts/create-admin.js",
-    "test": "node --check index.js && node --check schema.js && node --check scripts/seed.js && node --check scripts/check-db.js && node --check scripts/test-clinical-flow.js && node -e \"require('./src/app'); console.log('app ok')\"",
-    "test:clinical": "node scripts/test-clinical-flow.js"
+    "test": "node scripts/test-isolated.js",
+    "test:clinical": "node scripts/test-clinical-flow.js",
+    "test:security": "node scripts/test-security.js",
+    "test:settings": "node scripts/test-settings.js",
+    "test:visit-conversion": "node scripts/test-visit-conversion.js",
+    "secret:generate": "node scripts/generate-secret.js",
+    "test:db": "node scripts/test-payments-concurrency.js",
+    "test:postgres-isolated": "node scripts/test-postgres-isolated.js",
+    "test:auth-hardening": "node scripts/test-auth-hardening.js"
   },
   "keywords": [],
   "author": "",
@@ -21,7 +28,13 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "pdfkit": "^0.15.2",
     "pg": "^8.20.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

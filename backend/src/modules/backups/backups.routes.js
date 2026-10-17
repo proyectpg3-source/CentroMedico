@@ -32,6 +32,8 @@ router.get("/export", async (req, res) => {
       productos,
       movimientosProductos,
       documentos,
+      configuracionCentro,
+      atencionesRapidas,
     ] = await Promise.all([
       readTable("usuarios", "created_at ASC", "id_usuario, nombre, email, rol, id_medico, activo, created_at, updated_at"),
       readTable("pacientes", "fecha_registro ASC"),
@@ -50,6 +52,8 @@ router.get("/export", async (req, res) => {
       readTable("productos", "id ASC"),
       readTable("movimientos_productos", "id ASC"),
       readTable("documentos_paciente", "id ASC", "id, id_paciente, nombre, descripcion, tipo, encode(contenido, 'base64') AS contenido_base64, id_usuario, created_at"),
+      readTable("configuracion_centro", "id ASC"),
+      readTable("atenciones_rapidas", "id ASC"),
     ]);
 
     const data = {
@@ -70,6 +74,8 @@ router.get("/export", async (req, res) => {
       productos,
       movimientosProductos,
       documentos,
+      configuracionCentro,
+      atencionesRapidas,
     };
 
     await logAuditEvent({
@@ -81,7 +87,7 @@ router.get("/export", async (req, res) => {
     });
 
     res.json({
-      schemaVersion: 2,
+      schemaVersion: 4,
       exportedAt: new Date().toISOString(),
       generatedBy: {
         id_usuario: req.usuario.id_usuario,

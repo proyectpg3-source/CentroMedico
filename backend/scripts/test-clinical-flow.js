@@ -1,5 +1,9 @@
 require("dotenv").config({ quiet: true });
 
+if (process.env.RUN_DB_INTEGRATION !== "true" || !/_test$/i.test(process.env.DB_NAME || "")) {
+  throw new Error("Usa una base desechable DB_NAME terminada en _test y RUN_DB_INTEGRATION=true, o npm run test:postgres-isolated.");
+}
+
 const app = require("../src/app");
 const pool = require("../src/config/db");
 const { ensureSchema } = require("../schema");

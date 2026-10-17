@@ -88,6 +88,10 @@ async function resolvePayload(visita, client) {
   const cita = citaResult.rows[0];
   if (!cita) return { _notFound: "cita" };
   if (cita.estado === "cancelada") return { _cancelled: true };
+  if ((visita.id_paciente && visita.id_paciente !== cita.id_paciente) ||
+      (visita.id_medico && visita.id_medico !== cita.id_medico)) {
+    throw Object.assign(new Error("El paciente y el médico deben coincidir con la cita seleccionada."), { status: 400 });
+  }
 
   return {
     ...visita,
@@ -96,6 +100,11 @@ async function resolvePayload(visita, client) {
     fecha_visita: visita.fecha_visita || cita.fecha_hora || new Date().toISOString(),
     motivo: visita.motivo || cita.motivo || "Atencion medica",
   };
+}
+
+function validateResolved(visita) {
+  // Validate after deriving the appointment's patient, doctor, date and motive.
+  validate(visita, { status(status) { return { json(body) { throw Object.assign(new Error(body.message), { status }); } }; } });
 }
 
 async function getById(id, queryRunner = pool) {
@@ -153,6 +162,7 @@ async function create(body) {
     if (resolved._notFound) throw Object.assign(new Error("Cita no encontrada."), { status: 404 });
     if (resolved._cancelled) throw Object.assign(new Error("No se puede convertir en visita una cita cancelada."), { status: 400 });
     visita = resolved;
+    validateResolved(visita);
 
     await client.query("BEGIN");
 
@@ -229,6 +239,7 @@ async function update(id, body) {
     if (resolved._notFound) throw Object.assign(new Error("Cita no encontrada."), { status: 404 });
     if (resolved._cancelled) throw Object.assign(new Error("No se puede usar una cita cancelada."), { status: 400 });
     visita = resolved;
+    validateResolved(visita);
 
     await client.query("BEGIN");
     await client.query(

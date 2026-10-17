@@ -177,7 +177,7 @@ function DoctorModal({
             <Can module="doctors" action="edit">
               <button
                 onClick={onEdit}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm bg-[#2563eb] text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 Editar medico
@@ -288,7 +288,7 @@ function DoctorFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm bg-[#2563eb] text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center gap-2"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {mode === "create" ? "Registrar medico" : "Guardar cambios"}
@@ -565,7 +565,7 @@ export default function Doctors() {
                 setSubmitError(null);
                 setDoctorForm({ mode: "create", doctor: null });
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700 transition-colors ml-auto"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90 transition-colors ml-auto"
             >
               <Plus className="w-4 h-4" />
               Nuevo Medico

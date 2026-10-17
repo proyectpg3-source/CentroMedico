@@ -111,7 +111,7 @@ export default function Login() {
     "h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-10 pr-3 text-[15px] text-sidebar-foreground placeholder:text-sidebar-foreground/40 outline-none transition-colors focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50";
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-sidebar px-4 py-10">
+    <main className="clinic-login-centered relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-sidebar px-4 py-10">
       {/* Fondo: degradado institucional + halos de color, sin depender de una foto externa */}
       <div
         aria-hidden="true"
@@ -135,7 +135,7 @@ export default function Login() {
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
             <Activity size={26} aria-hidden="true" />
           </div>
-          <h1 className="mt-4 text-base font-semibold uppercase tracking-[0.14em] text-sidebar-foreground">
+          <h1 className="mt-4 text-xl font-semibold tracking-tight text-sidebar-foreground">
             Centro Médico La Aurora
           </h1>
           <p className="mt-1 text-sm text-sidebar-foreground/50">
@@ -143,7 +143,7 @@ export default function Login() {
           </p>
         </div>
 
-        <form onSubmit={submit} noValidate className="space-y-4">
+        <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label
               htmlFor="login-email"
@@ -208,7 +208,7 @@ export default function Login() {
                   showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
                 }
                 aria-pressed={showPassword}
-                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded text-sidebar-foreground/50 transition-colors hover:text-sidebar-foreground disabled:pointer-events-none disabled:opacity-50"
+                className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded text-sidebar-foreground/50 transition-colors hover:text-sidebar-foreground disabled:pointer-events-none disabled:opacity-50"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>

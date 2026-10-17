@@ -1,4 +1,9 @@
 const SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS configuracion_centro (
+    id SMALLINT PRIMARY KEY CHECK (id = 1),
+    datos JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`,
   `
     CREATE TABLE IF NOT EXISTS pacientes (
       id_paciente SERIAL PRIMARY KEY,
@@ -460,6 +465,19 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE movimientos_productos ADD COLUMN IF NOT EXISTS id_prescripcion INTEGER REFERENCES prescripciones(id_prescripcion) ON DELETE SET NULL;`,
   `CREATE INDEX IF NOT EXISTS idx_movimientos_productos_prescripcion
     ON movimientos_productos(id_prescripcion) WHERE id_prescripcion IS NOT NULL;`,
+  `CREATE TABLE IF NOT EXISTS atenciones_rapidas (
+    id SERIAL PRIMARY KEY,
+    solicitud UUID NOT NULL UNIQUE,
+    nombre_temporal VARCHAR(160),
+    motivo VARCHAR(2000) NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','en_atencion','finalizada')),
+    id_paciente INTEGER REFERENCES pacientes(id_paciente) ON DELETE RESTRICT,
+    iniciado_por INTEGER NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    atendido_por INTEGER REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    actualizado_por INTEGER NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`,
 ];
 
 async function ensureSchema(pool) {

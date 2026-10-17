@@ -68,3 +68,28 @@ npm test
 npm run test:clinical
 npm run db:check
 ```
+
+## Pruebas de seguridad para SQA
+
+Desde `backend`, ejecutar `npm run test:security`. La prueba usa las rutas y la
+autenticación reales con PostgreSQL y la inicialización del esquema sustituidos
+por dobles estrictos. No modifica la base de datos real ni ejecuta migraciones.
+
+La evidencia se guarda en `output/sqa/resultados_seguridad.json` y la entrega
+incluye `output/sqa/informe_seguridad.md`. El proceso devuelve código 1 si hay
+hallazgos pendientes; no debe interpretarse como una ejecución aprobada.
+
+Esta comprobación local no sustituye pruebas de integración, auditoría de todas
+las rutas ni revisión del entorno desplegado.
+
+Regresiones aisladas de configuración y conversión de cita:
+
+```bash
+cd backend
+npm run test:settings
+npm run test:visit-conversion
+```
+
+Estas pruebas sustituyen PostgreSQL y la inicialización del esquema por dobles;
+no usan datos reales. La configuración general se almacena en
+`configuracion_centro`, incluida en respaldos con versión de esquema 3.

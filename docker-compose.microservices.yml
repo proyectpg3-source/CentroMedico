@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: Centro_medico
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD para la base de datos}
     ports:
       - "5433:5432"
     volumes:
@@ -51,10 +51,10 @@ services:
       DB_USER: postgres
       DB_HOST: postgres
       DB_NAME: Centro_medico
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD para la base de datos}
       DB_PORT: 5432
       CORS_ORIGIN: http://localhost:5173
-      JWT_SECRET: cambia-esta-clave-en-produccion
+      JWT_SECRET: ${JWT_SECRET:?Genera JWT_SECRET con npm run secret:generate}
       JWT_EXPIRES_IN: 8h
       TRIAGE_SERVICE_URL: http://triage-priority-service:4101
       INVENTORY_ALERTS_SERVICE_URL: http://inventory-alerts-service:4102

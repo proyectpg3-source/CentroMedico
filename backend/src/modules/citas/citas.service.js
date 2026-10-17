@@ -13,7 +13,7 @@ function sanitize(body) {
   return {
     id_paciente: getOptionalId(body.id_paciente),
     id_medico: getOptionalId(body.id_medico),
-    fecha_hora: getTrimmedString(body.fecha_hora),
+    fecha_hora: body.fecha_hora instanceof Date && isValidDateTime(body.fecha_hora) ? body.fecha_hora.toISOString() : getTrimmedString(body.fecha_hora),
     motivo: getOptionalString(body.motivo),
     triaje_notas: getOptionalString(body.triaje_notas),
     estado: estado || null,
@@ -34,6 +34,10 @@ function validate(cita, res) {
     return false;
   }
   return true;
+}
+
+function validateBeforeWrite(cita) {
+  validate(cita, { status(status) { return { json(body) { throw Object.assign(new Error(body.message), { status }); } }; } });
 }
 
 async function getAll(query) {
@@ -88,6 +92,7 @@ async function getById(id) {
 
 async function create(body) {
   const c = sanitize(body);
+  validateBeforeWrite(c);
   const prioridad = await calcularPrioridadParaPaciente(c.id_paciente, c);
   const result = await pool.query(
     `INSERT INTO citas (
@@ -116,6 +121,7 @@ async function update(id, body) {
   if (!current.rows[0]) return null;
 
   const c = sanitize({ ...current.rows[0], ...body });
+  validateBeforeWrite(c);
   const prioridad = await calcularPrioridadParaPaciente(c.id_paciente, c);
   await pool.query(
     `UPDATE citas

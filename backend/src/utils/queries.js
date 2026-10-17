@@ -1,4 +1,4 @@
-// ─── SELECT queries enriquecidos ──────────────────────────────────────────────
+// ─── SELECT queries enriquecidos y corregidos ─────────────────────────────────
 
 const CITA_SELECT = `
   SELECT
@@ -16,6 +16,7 @@ const CITA_SELECT = `
   LEFT JOIN medicos m ON m.id_medico = c.id_medico
 `;
 
+// Subconsultas escalares para conteo evitan el producto cartesiano y la necesidad de GROUP BY
 const VISITA_SELECT = `
   SELECT
     v.id_visita, v.id_cita, v.id_paciente, v.id_medico,
@@ -34,19 +35,18 @@ const VISITA_SELECT = `
     m.nombre AS medico_nombre, m.especialidad AS medico_especialidad,
     m.licencia AS medico_licencia,
     c.fecha_hora AS cita_fecha_hora, c.estado AS cita_estado,
-    COUNT(DISTINCT o.id_orden)::int AS total_ordenes_laboratorio,
-    COUNT(DISTINCT pr.id_prescripcion)::int AS total_prescripciones
+    (SELECT COUNT(*)::int FROM ordenes_laboratorio o WHERE o.id_visita = v.id_visita) AS total_ordenes_laboratorio,
+    (SELECT COUNT(*)::int FROM prescripciones pr WHERE pr.id_visita = v.id_visita) AS total_prescripciones
   FROM visitas_medicas v
   LEFT JOIN pacientes p ON p.id_paciente = v.id_paciente
   LEFT JOIN medicos m ON m.id_medico = v.id_medico
   LEFT JOIN citas c ON c.id_cita = v.id_cita
-  LEFT JOIN ordenes_laboratorio o ON o.id_visita = v.id_visita
-  LEFT JOIN prescripciones pr ON pr.id_visita = v.id_visita
 `;
 
 const LAB_ORDER_SELECT = `
   SELECT
-    o.id_orden, o.id_paciente, o.id_cita, o.id_visita,
+    o.id_orden, o.id_cita, o.id_visita,
+    o.id_paciente,
     o.examen, o.prioridad, o.estado, o.costo, o.created_at, o.updated_at,
     p.nombre AS paciente_nombre, p.dni AS paciente_dni,
     p.telefono AS paciente_telefono, p.email AS paciente_email,
@@ -54,11 +54,12 @@ const LAB_ORDER_SELECT = `
     COALESCE(vm.nombre, cm.nombre) AS medico_nombre,
     COALESCE(vm.especialidad, cm.especialidad) AS medico_especialidad,
     r.id_resultado, r.resultado, r.observaciones AS resultado_observaciones,
-    r.fecha_resultado, r.validado_por
+    r.fecha_resultado, r.validado_por,
+    r.validado_por AS validador_nombre
   FROM ordenes_laboratorio o
-  LEFT JOIN pacientes p ON p.id_paciente = o.id_paciente
   LEFT JOIN visitas_medicas v ON v.id_visita = o.id_visita
   LEFT JOIN citas c ON c.id_cita = o.id_cita
+  LEFT JOIN pacientes p ON p.id_paciente = o.id_paciente
   LEFT JOIN medicos vm ON vm.id_medico = v.id_medico
   LEFT JOIN medicos cm ON cm.id_medico = c.id_medico
   LEFT JOIN resultados_laboratorio r ON r.id_orden = o.id_orden
@@ -68,22 +69,27 @@ const RESULTADO_SELECT = `
   SELECT
     r.id_resultado, r.id_orden, r.resultado, r.observaciones,
     r.fecha_resultado, r.validado_por, r.created_at, r.updated_at,
-    o.id_paciente, o.id_cita, o.id_visita, o.examen, o.prioridad, o.estado, o.costo,
+    r.validado_por AS validador_nombre,
+    o.id_paciente,
+    o.id_cita, o.id_visita, o.examen, o.prioridad, o.estado, o.costo,
     p.nombre AS paciente_nombre, p.dni AS paciente_dni,
     COALESCE(vm.nombre, cm.nombre) AS medico_nombre
   FROM resultados_laboratorio r
   INNER JOIN ordenes_laboratorio o ON o.id_orden = r.id_orden
-  LEFT JOIN pacientes p ON p.id_paciente = o.id_paciente
   LEFT JOIN visitas_medicas v ON v.id_visita = o.id_visita
   LEFT JOIN citas c ON c.id_cita = o.id_cita
+  LEFT JOIN pacientes p ON p.id_paciente = o.id_paciente
   LEFT JOIN medicos vm ON vm.id_medico = v.id_medico
   LEFT JOIN medicos cm ON cm.id_medico = c.id_medico
 `;
 
-// Las salidas de farmacia se guardan con cantidad negativa.
+// Salida de farmacia / insumos calculada según el historial de movimientos
 const DISPENSED_QUANTITY = `
-  COALESCE((SELECT -SUM(mp.cantidad) FROM movimientos_productos mp
-            WHERE mp.id_prescripcion = pr.id_prescripcion), 0)::int
+  COALESCE((
+    SELECT -SUM(mp.cantidad)
+    FROM movimientos_productos mp
+    WHERE mp.id_prescripcion = pr.id_prescripcion
+  ), 0)::int
 `;
 
 const PRESCRIPTION_SELECT = `
@@ -107,19 +113,18 @@ const PRESCRIPTION_SELECT = `
 
 const CARGO_SELECT = `
   SELECT
-    cp.id_cargo, cp.id_paciente, cp.origen, cp.referencia_tipo, cp.referencia_id,
+    cp.id_cargo, cp.id_paciente, cp.referencia_tipo, cp.referencia_id, cp.origen,
     cp.descripcion, cp.subtotal, cp.total, cp.saldo, cp.estado_pago,
     cp.created_at, cp.updated_at,
     p.nombre AS paciente_nombre, p.dni AS paciente_dni,
-    COALESCE(SUM(pg.monto), 0)::numeric(10,2) AS total_pagado
+    COALESCE((SELECT SUM(pg.monto) FROM pagos pg WHERE pg.id_cargo = cp.id_cargo), 0)::numeric(10,2) AS total_pagado
   FROM cargos_paciente cp
   INNER JOIN pacientes p ON p.id_paciente = cp.id_paciente
-  LEFT JOIN pagos pg ON pg.id_cargo = cp.id_cargo
 `;
 
 const PAGO_SELECT = `
   SELECT
-    pg.id_pago, pg.id_paciente, pg.id_cargo, pg.monto,
+    pg.id_pago, cp.id_paciente, pg.id_cargo, pg.monto,
     pg.fecha_pago, pg.metodo, pg.referencia, pg.observaciones, pg.created_at,
     cp.descripcion AS cargo_descripcion, cp.origen AS cargo_origen,
     cp.total AS cargo_total, cp.saldo AS cargo_saldo,
@@ -127,7 +132,7 @@ const PAGO_SELECT = `
     p.nombre AS paciente_nombre, p.dni AS paciente_dni
   FROM pagos pg
   INNER JOIN cargos_paciente cp ON cp.id_cargo = pg.id_cargo
-  INNER JOIN pacientes p ON p.id_paciente = pg.id_paciente
+  INNER JOIN pacientes p ON p.id_paciente = cp.id_paciente
 `;
 
 module.exports = {

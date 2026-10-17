@@ -22,7 +22,7 @@ import {
 } from "recharts";
 import { fetchCharges, fetchPayments } from "../api/billing";
 import { fetchLabOrders } from "../api/laboratory";
-import { fetchPatients } from "../api/patients";
+import { fetchPatientCount } from "../api/patients";
 import { fetchPrescriptions } from "../api/prescriptions";
 import { fetchVisits } from "../api/visits";
 import { formatCurrency, getErrorMessage, numericValue } from "../lib/format";
@@ -66,7 +66,7 @@ export default function Reports() {
           chargesResponse,
           paymentsResponse,
         ] = await Promise.all([
-          fetchPatients(controller.signal),
+          fetchPatientCount(controller.signal),
           fetchVisits(undefined, controller.signal),
           fetchLabOrders(undefined, controller.signal),
           fetchPrescriptions(undefined, controller.signal),
@@ -74,7 +74,7 @@ export default function Reports() {
           fetchPayments(undefined, controller.signal),
         ]);
 
-        setPatientCount(patientsResponse.length);
+        setPatientCount(patientsResponse);
         setVisits(visitsResponse);
         setOrders(ordersResponse);
         setPrescriptions(prescriptionsResponse);

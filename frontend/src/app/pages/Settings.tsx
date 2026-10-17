@@ -8,6 +8,9 @@ import { fetchDoctors, type DoctorRecord } from "../api/doctors";
 import { ROLE_LABELS, type UserRole } from "../auth/roles";
 import { useAuth } from "../auth/AuthContext";
 import { formatDateTime } from "../lib/format";
+import { fetchCenterSettings, saveCenterSettings, type CenterSettings } from "../api/settings";
+import { ChangePasswordForm } from "../components/ChangePasswordForm";
+import { AppearanceSettings } from "../components/AppearanceProvider";
 import {
   Building2,
   Bell,
@@ -44,97 +47,122 @@ const settingsSections = [
 
 function GeneralSettings() {
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState({
-    centerName: "Centro Médico La Aurora",
-    rut: "CM-2026-001",
-    address: "Boulevard principal, zona clínica",
-    phone: "+52 55 0000 0000",
-    email: "direccion@laaurora.salud",
-    website: "www.laaurora.salud",
-    timezone: "America/Mexico_City",
-    language: "Español (Latinoamérica)",
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState<CenterSettings>({ centerName: "", rut: "", address: "", phone: "", email: "", website: "", timezone: "America/Guatemala", language: "Español (Latinoamérica)" });
+  const [retry, setRetry] = useState(0);
+  const [loaded, setLoaded] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    fetchCenterSettings(controller.signal).then((data) => {
+      if (!controller.signal.aborted) { setForm(data); setLoaded(true); }
+    }).catch((cause) => {
+      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "No se pudo cargar la configuración.");
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [retry]);
+
+  const editForm = (data: CenterSettings) => { setForm(data); setSaved(false); };
+  const handleSave = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaved(false);
+    setError("");
+    setSaving(true);
+    try { const data = await saveCenterSettings(form); setForm(data); setSaved(true); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración."); }
+    finally { setSaving(false); }
   };
+  if (loading) return <p role="status" className="py-8 text-sm text-gray-500">Cargando configuración…</p>;
+  if (!loaded) return <div className="space-y-4"><p role="alert" className="text-sm text-rose-700">{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)} className="rounded-lg border px-4 py-2 text-sm">Reintentar</button></div>;
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSave} className="space-y-6">
       <div>
         <h3 className="text-gray-900 mb-1">Información del Centro</h3>
         <p className="text-sm text-gray-500">Datos generales del centro médico</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="col-span-2">
-          <label className="text-sm text-gray-700">Nombre del Centro Médico</label>
+      <fieldset disabled={saving} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
+          <label htmlFor="clinic-setting-centerName" className="text-sm text-gray-700">Nombre del Centro Médico</label>
           <input
+            id="clinic-setting-centerName"
+            required maxLength={120}
             value={form.centerName}
-            onChange={(e) => setForm({ ...form, centerName: e.target.value })}
+            onChange={(e) => editForm({ ...form, centerName: e.target.value })}
             className="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
           />
         </div>
         <div>
-          <label className="text-sm text-gray-700">RUT</label>
+          <label htmlFor="clinic-setting-rut" className="text-sm text-gray-700">RUT</label>
           <input
+            id="clinic-setting-rut"
             value={form.rut}
-            onChange={(e) => setForm({ ...form, rut: e.target.value })}
+            onChange={(e) => editForm({ ...form, rut: e.target.value })}
             className="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
           />
         </div>
         <div>
-          <label className="text-sm text-gray-700">Teléfono de Contacto</label>
+          <label htmlFor="clinic-setting-phone" className="text-sm text-gray-700">Teléfono de Contacto</label>
           <div className="relative mt-1">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
+              id="clinic-setting-phone"
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={(e) => editForm({ ...form, phone: e.target.value })}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
         <div>
-          <label className="text-sm text-gray-700">Email Institucional</label>
+          <label htmlFor="clinic-setting-email" className="text-sm text-gray-700">Email Institucional</label>
           <div className="relative mt-1">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
+              id="clinic-setting-email"
+              type="email"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={(e) => editForm({ ...form, email: e.target.value })}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
         <div>
-          <label className="text-sm text-gray-700">Sitio Web</label>
+          <label htmlFor="clinic-setting-website" className="text-sm text-gray-700">Sitio Web</label>
           <div className="relative mt-1">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
+              id="clinic-setting-website"
               value={form.website}
-              onChange={(e) => setForm({ ...form, website: e.target.value })}
+              onChange={(e) => editForm({ ...form, website: e.target.value })}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
-        <div className="col-span-2">
-          <label className="text-sm text-gray-700">Dirección</label>
+        <div className="sm:col-span-2">
+          <label htmlFor="clinic-setting-address" className="text-sm text-gray-700">Dirección</label>
           <div className="relative mt-1">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
+              id="clinic-setting-address"
               value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              onChange={(e) => editForm({ ...form, address: e.target.value })}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
         <div>
-          <label className="text-sm text-gray-700">Zona Horaria</label>
+          <label htmlFor="clinic-setting-timezone" className="text-sm text-gray-700">Zona Horaria</label>
           <div className="relative mt-1">
             <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <select
+              id="clinic-setting-timezone"
               value={form.timezone}
-              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+              onChange={(e) => editForm({ ...form, timezone: e.target.value })}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
             >
               <option value="America/Mexico_City">America/Mexico_City (GMT-6)</option>
@@ -146,90 +174,39 @@ function GeneralSettings() {
           </div>
         </div>
         <div>
-          <label className="text-sm text-gray-700">Idioma</label>
+          <label htmlFor="clinic-setting-language" className="text-sm text-gray-700">Idioma</label>
           <select
+            id="clinic-setting-language"
             value={form.language}
-            onChange={(e) => setForm({ ...form, language: e.target.value })}
+            onChange={(e) => editForm({ ...form, language: e.target.value })}
             className="mt-1 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
           >
             <option>Español (Latinoamérica)</option>
             <option>English (US)</option>
           </select>
         </div>
-      </div>
+      </fieldset>
+      {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
+      {saved && <p role="status" className="text-sm text-emerald-700">Configuración guardada en el servidor.</p>}
 
       <Can module="settings" action="edit">
         <button
-          onClick={handleSave}
+          type="submit"
+          disabled={saving}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm transition-all ${
-            saved ? "bg-green-600 text-white" : "bg-[#2563eb] text-white hover:bg-blue-700"
+            saved ? "bg-green-600 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"
           }`}
         >
-          {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saved ? "Guardado correctamente" : "Guardar cambios"}
+          {saving ? <LoaderCircle className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+          {saving ? "Guardando…" : saved ? "Guardado correctamente" : "Guardar cambios"}
         </button>
       </Can>
-    </div>
+    </form>
   );
 }
 
 function NotificationsSettings() {
-  const [settings, setSettings] = useState({
-    emailReminders: true,
-    smsReminders: false,
-    appointmentConfirm: true,
-    cancellations: true,
-    newPatients: true,
-    systemAlerts: true,
-    weeklyReport: false,
-    monthlyReport: true,
-  });
-
-  const toggle = (key: keyof typeof settings) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const items: { key: keyof typeof settings; label: string; desc: string }[] = [
-    { key: "emailReminders", label: "Recordatorios por Email", desc: "Enviar recordatorio 24h antes de la cita" },
-    { key: "smsReminders", label: "Recordatorios por SMS", desc: "Enviar recordatorio por mensaje de texto" },
-    { key: "appointmentConfirm", label: "Confirmación de Citas", desc: "Notificar cuando se confirma una cita" },
-    { key: "cancellations", label: "Cancelaciones", desc: "Alertar cuando se cancela una cita" },
-    { key: "newPatients", label: "Nuevos Pacientes", desc: "Notificar cuando se registra un nuevo paciente" },
-    { key: "systemAlerts", label: "Alertas del Sistema", desc: "Recibir alertas críticas del sistema" },
-    { key: "weeklyReport", label: "Reporte Semanal", desc: "Recibir resumen semanal por email" },
-    { key: "monthlyReport", label: "Reporte Mensual", desc: "Recibir resumen mensual por email" },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-gray-900 mb-1">Configuración de Notificaciones</h3>
-        <p className="text-sm text-gray-500">Elige qué notificaciones deseas recibir</p>
-      </div>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-            <div>
-              <p className="text-sm text-gray-900">{item.label}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
-            </div>
-            <button
-              onClick={() => toggle(item.key)}
-              className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-                settings[item.key] ? "bg-[#2563eb]" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  settings[item.key] ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="space-y-4"><h3 className="text-gray-900">Notificaciones</h3><p className="text-sm text-gray-500">El envío de recordatorios por correo y SMS todavía no está integrado. No se activan envíos desde esta pantalla.</p><p className="text-sm text-gray-500">Los avisos de las operaciones aparecen en cada módulo. Podés revisar las alertas de existencias y vencimiento en Laboratorio e Inventario.</p></div>;
 }
 
 const USER_ROLES: UserRole[] = ["admin", "medico", "enfermero", "fundacion", "recepcionista"];
@@ -306,7 +283,7 @@ function UsersSettings() {
           <p className="text-sm text-gray-500">Crea cuentas y controla el acceso por rol.</p>
         </div>
         <Can module="settings" action="create">
-          <button type="button" onClick={() => setShowForm((current) => !current)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white hover:bg-blue-700">
+          <button type="button" onClick={() => setShowForm((current) => !current)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90">
             <UserPlus className="h-4 w-4" /> Nuevo usuario
           </button>
         </Can>
@@ -334,7 +311,7 @@ function UsersSettings() {
           )}
           <div className="flex justify-end gap-2 sm:col-span-2">
             <button type="button" onClick={() => setShowForm(false)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-600">Cancelar</button>
-            <button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-60">
+            <button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60">
               {saving && <LoaderCircle className="h-4 w-4 animate-spin" />}{saving ? "Creando…" : "Crear usuario"}
             </button>
           </div>
@@ -444,7 +421,7 @@ function DataBackupSettings() {
           type="button"
           onClick={() => void downloadBackup()}
           disabled={exporting}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60"
         >
           {exporting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           {exporting ? "Generando..." : "Descargar backup"}
@@ -532,20 +509,6 @@ function DataBackupSettings() {
   );
 }
 
-function PlaceholderSection({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-gray-900 mb-1">{title}</h3>
-        <p className="text-sm text-gray-500">{desc}</p>
-      </div>
-      <div className="p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-center">
-        <p className="text-gray-400 text-sm">Esta sección estará disponible próximamente.</p>
-      </div>
-    </div>
-  );
-}
-
 export default function Settings() {
   const [activeSection, setActiveSection] = useState("general");
 
@@ -553,9 +516,9 @@ export default function Settings() {
     switch (activeSection) {
       case "general": return <GeneralSettings />;
       case "notifications": return <NotificationsSettings />;
-      case "security": return <PlaceholderSection title="Seguridad" desc="Gestión de contraseñas, autenticación y permisos" />;
+      case "security": return <ChangePasswordForm className="space-y-6" />;
       case "users": return <UsersSettings />;
-      case "appearance": return <PlaceholderSection title="Apariencia" desc="Personaliza el aspecto visual del sistema" />;
+      case "appearance": return <AppearanceSettings />;
       case "data": return <DataBackupSettings />;
       default: return null;
     }
@@ -576,7 +539,7 @@ export default function Settings() {
                   onClick={() => setActiveSection(section.id)}
                   className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors border-b border-gray-50 last:border-0 ${
                     activeSection === section.id
-                      ? "bg-blue-50 text-[#2563eb]"
+                      ? "bg-accent text-accent-foreground"
                       : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >

@@ -13,7 +13,7 @@ import {
 } from "../api/appointments";
 import { createLabOrder } from "../api/laboratory";
 import { fetchDoctors, type DoctorRecord } from "../api/doctors";
-import { fetchPatients, type PatientRecord } from "../api/patients";
+import { fetchPatientOptions, type PatientOption } from "../api/patients";
 import { createVisit } from "../api/visits";
 import {
   AlertCircle,
@@ -197,7 +197,7 @@ function AppointmentFormModal({
 }: {
   mode: "create" | "edit";
   appointment: AppointmentRecord | null;
-  patients: PatientRecord[];
+  patients: PatientOption[];
   doctors: DoctorRecord[];
   onClose: () => void;
   onSubmit: (form: AppointmentFormState) => void;
@@ -268,7 +268,7 @@ function AppointmentFormModal({
                 <option value="">Selecciona un paciente</option>
                 {patients.map((patient) => (
                   <option key={patient.id_paciente} value={patient.id_paciente}>
-                    {patient.nombre} - {patient.dni}
+                    {patient.nombre} - #{patient.id_paciente}
                   </option>
                 ))}
               </select>
@@ -376,7 +376,7 @@ function AppointmentFormModal({
             <button
               type="submit"
               disabled={isSubmitting || !canSubmit}
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === "create" ? "Guardar cita" : "Guardar cambios"}
@@ -442,11 +442,12 @@ function VisitModal({
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <label className="text-sm font-medium text-slate-700">Fecha *</label>
+              <label htmlFor="visit-date" className="text-sm font-medium text-slate-700">Fecha *</label>
               <input
                 type="date"
                 required
-                value={form.date}
+                id="visit-date"
+              value={form.date}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, date: event.target.value }))
                 }
@@ -454,11 +455,12 @@ function VisitModal({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Hora *</label>
+              <label htmlFor="visit-time" className="text-sm font-medium text-slate-700">Hora *</label>
               <input
                 type="time"
                 required
-                value={form.time}
+                id="visit-time"
+              value={form.time}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, time: event.target.value }))
                 }
@@ -466,13 +468,14 @@ function VisitModal({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Costo consulta *</label>
+              <label htmlFor="visit-costo_consulta" className="text-sm font-medium text-slate-700">Costo consulta *</label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 required
-                value={form.costo_consulta}
+                id="visit-costo_consulta"
+              value={form.costo_consulta}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -485,10 +488,11 @@ function VisitModal({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Motivo *</label>
+            <label htmlFor="visit-motivo" className="text-sm font-medium text-slate-700">Motivo *</label>
             <textarea
               required
               rows={2}
+              id="visit-motivo"
               value={form.motivo}
               onChange={(event) =>
                 setForm((current) => ({ ...current, motivo: event.target.value }))
@@ -498,10 +502,11 @@ function VisitModal({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Diagnostico *</label>
+            <label htmlFor="visit-diagnostico" className="text-sm font-medium text-slate-700">Diagnostico *</label>
             <textarea
               required
               rows={3}
+              id="visit-diagnostico"
               value={form.diagnostico}
               onChange={(event) =>
                 setForm((current) => ({ ...current, diagnostico: event.target.value }))
@@ -512,9 +517,10 @@ function VisitModal({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Tratamiento</label>
+            <label htmlFor="visit-tratamiento" className="text-sm font-medium text-slate-700">Tratamiento</label>
             <textarea
               rows={3}
+              id="visit-tratamiento"
               value={form.tratamiento}
               onChange={(event) =>
                 setForm((current) => ({ ...current, tratamiento: event.target.value }))
@@ -524,9 +530,10 @@ function VisitModal({
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Observaciones</label>
+            <label htmlFor="visit-observaciones" className="text-sm font-medium text-slate-700">Observaciones</label>
             <textarea
               rows={3}
+              id="visit-observaciones"
               value={form.observaciones}
               onChange={(event) =>
                 setForm((current) => ({ ...current, observaciones: event.target.value }))
@@ -916,7 +923,7 @@ function AppointmentCard({
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
-  const [patients, setPatients] = useState<PatientRecord[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
   const [doctors, setDoctors] = useState<DoctorRecord[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -942,7 +949,7 @@ export default function Appointments() {
 
       const [appointmentsResponse, patientsResponse, doctorsResponse] = await Promise.all([
         fetchAppointments(undefined, signal),
-        fetchPatients(signal),
+        fetchPatientOptions(signal),
         fetchDoctors(undefined, signal),
       ]);
 
@@ -1079,6 +1086,8 @@ export default function Appointments() {
     try {
       await createVisit({
         id_cita: appointmentForVisit.id_cita,
+        id_paciente: appointmentForVisit.id_paciente,
+        id_medico: appointmentForVisit.id_medico,
         diagnostico: form.diagnostico.trim(),
         fecha_visita: toDateTimePayload(form.date, form.time),
         motivo: form.motivo.trim(),
@@ -1239,7 +1248,7 @@ export default function Appointments() {
                   setAppointmentForm({ mode: "create", appointment: null });
                 }}
                 disabled={patients.length === 0 || doctors.length === 0}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <CalendarDays className="h-4 w-4" />
                 Nueva cita
@@ -1248,6 +1257,7 @@ export default function Appointments() {
           </div>
 
           <div className="mt-5 flex flex-col gap-3 xl:flex-row">
+            {!loading && (patients.length === 0 || doctors.length === 0) && <p role="status" className="text-sm text-slate-600">Para crear una cita, primero registrá al menos un paciente y un médico en sus módulos.</p>}
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input

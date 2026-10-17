@@ -126,7 +126,7 @@ export default function Emergencias() {
               </select>
             </div>
             <div className="flex gap-2 mt-3">
-              <button onClick={handleAdd} className="px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700">
+              <button onClick={handleAdd} className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90">
                 Registrar
               </button>
               <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-200 text-slate-600 text-sm rounded-lg hover:bg-slate-50">
@@ -187,7 +187,7 @@ export default function Emergencias() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         {p.status === "waiting" && (
-                          <button onClick={() => handleAttend(p.id)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                          <button onClick={() => handleAttend(p.id)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-primary/90">
                             Atender
                           </button>
                         )}

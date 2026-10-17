@@ -2,6 +2,12 @@
 node_modules
 .env
 .env.local
+.env.*
+!.env.example
+*.zip
+*.dump
+*.backup
+.git
 npm-debug.log*
 backend-dev*.log
 .vs

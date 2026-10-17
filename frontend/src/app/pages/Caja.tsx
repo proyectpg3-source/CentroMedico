@@ -219,7 +219,7 @@ export default function Caja() {
                       className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-400" />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={addItem} className="px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg hover:bg-blue-700">Agregar</button>
+                    <button onClick={addItem} className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90">Agregar</button>
                     <button onClick={() => setShowAddItem(false)} className="px-4 py-2 border border-gray-200 text-slate-600 text-sm rounded-lg">Cancelar</button>
                   </div>
                 </div>

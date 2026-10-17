@@ -1,3 +1,7 @@
+//lista de roles que acepta el servidor
+// Se utiliza un conjunto (Set) para almacenar los roles válidos, 
+// lo que permite una verificación rápida y eficiente de los roles proporcionados por el usuario durante el inicio de sesión o la creación de un nuevo usuario.
+//
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -6,6 +10,8 @@ const { getTrimmedString } = require("../../utils/validators");
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "8h";
 const SALT_ROUNDS = 12;
+// Hash de comparación sin cuenta asociada: reduce diferencias temporales de login.
+const DUMMY_HASH = "$2b$12$cDp9O39vAswD5KObeVyRYeAQ/SvaEOXmpod5ogKik/mpaRCZvT/X2";
 const VALID_ROLES = new Set([
   "admin",
   "medico",
@@ -34,7 +40,7 @@ function buildToken(usuario) {
       id_medico: usuario.id_medico || null,
     },
     getJwtSecret(),
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN, algorithm: "HS256" }
   );
 }
 
@@ -64,7 +70,8 @@ async function login(body) {
   const usuario = result.rows[0];
   const invalidMessage = "Credenciales incorrectas.";
 
-  if (!usuario) {
+  const passwordOk = await bcrypt.compare(password, usuario ? usuario.password : DUMMY_HASH);
+  if (!usuario || !passwordOk) {
     const error = new Error(invalidMessage);
     error.status = 401;
     throw error;
@@ -73,13 +80,6 @@ async function login(body) {
   if (!usuario.activo) {
     const error = new Error("Tu cuenta esta desactivada. Contacta al administrador.");
     error.status = 403;
-    throw error;
-  }
-
-  const passwordOk = await bcrypt.compare(password, usuario.password);
-  if (!passwordOk) {
-    const error = new Error(invalidMessage);
-    error.status = 401;
     throw error;
   }
 
@@ -194,9 +194,12 @@ async function getUsuarios() {
 }
 
 async function toggleActivo(idUsuario, activo) {
+  if (typeof activo !== "boolean") {
+    throw Object.assign(new Error("El estado activo debe ser verdadero o falso."), { status: 400 });
+  }
   const result = await pool.query(
     "UPDATE usuarios SET activo = $1, updated_at = NOW() WHERE id_usuario = $2 RETURNING *",
-    [Boolean(activo), idUsuario]
+    [activo, idUsuario]
   );
   const usuario = result.rows[0];
 

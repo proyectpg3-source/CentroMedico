@@ -1,3 +1,9 @@
+//decide que paginas pueden ser accedidas por cada rol de usuario. Esto se hace mediante un objeto llamado MODULE_ACCESS, que mapea cada ruta a un array de roles que tienen permiso para acceder a esa ruta. 
+//Por ejemplo, la ruta "/patients" puede ser accedida por los roles "admin", "medico", "enfermero" y "recepcionista".
+
+
+//si se añade un nuevo rol tienes que añadirlo en valid_roles.ts y en el backend en auth.service.js
+
 export type UserRole = "admin" | "medico" | "enfermero" | "fundacion" | "recepcionista";
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -18,6 +24,7 @@ export const ALL_ROLES: UserRole[] = [
 
 export const MODULE_ACCESS: Record<string, UserRole[]> = {
   "/": ALL_ROLES,
+  "/atencion-rapida": ["admin", "medico", "enfermero", "recepcionista"],
   "/patients": ["admin", "medico", "enfermero", "recepcionista"],
   "/appointments": ALL_ROLES,
   "/recepcion": ["admin", "recepcionista", "enfermero"],

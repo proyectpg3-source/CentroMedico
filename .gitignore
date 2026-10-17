@@ -1,5 +1,6 @@
 # Dependency directories
 node_modules/
+.npm-cache/
 backend/node_modules/
 frontend/node_modules/
 

@@ -3,6 +3,7 @@ import { Header } from "../components/layout/Header";
 import { Can } from "../auth/usePermissions";
 import {
   createPayment,
+  fetchAccountStatementPdf,
   fetchCharges,
   fetchPayments,
   type ChargeRecord,
@@ -13,6 +14,7 @@ import {
   AlertCircle,
   Banknote,
   CreditCard,
+  FileText,
   Loader2,
   ReceiptText,
   Search,
@@ -192,6 +194,31 @@ export default function Billing() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedCharge, setSelectedCharge] = useState<ChargeRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pdfLoadingId, setPdfLoadingId] = useState<number | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  async function handleOpenStatement(idPaciente: number) {
+    setPdfLoadingId(idPaciente);
+    setPdfError(null);
+    // Se abre la pestana ANTES de esperar al servidor para que el navegador no la bloquee.
+    const win = window.open("", "_blank");
+    try {
+      const blob = await fetchAccountStatementPdf(idPaciente);
+      const url = URL.createObjectURL(blob);
+      if (win) {
+        win.opener = null;
+        win.location.href = url;
+      } else {
+        window.location.href = url;
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      win?.close();
+      setPdfError(getErrorMessage(err, "No se pudo generar el estado de cuenta."));
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
 
   async function loadData(signal?: AbortSignal) {
     try {
@@ -313,6 +340,13 @@ export default function Billing() {
             <p className="mt-2 text-3xl font-semibold text-slate-900">{stats.payments}</p>
           </div>
         </div>
+
+        {pdfError && (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm">
+            <p className="text-sm font-medium text-amber-800">No se pudo abrir el estado de cuenta.</p>
+            <p className="mt-1 text-sm text-amber-700">{pdfError}</p>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm">
@@ -476,6 +510,21 @@ export default function Billing() {
                       >
                         <CreditCard className="h-4 w-4" />
                         Registrar pago
+                      </button>
+                    </Can>
+                    <Can module="billing" action="create">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenStatement(charge.id_paciente)}
+                        disabled={pdfLoadingId === charge.id_paciente}
+                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {pdfLoadingId === charge.id_paciente ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                        Estado de cuenta (PDF)
                       </button>
                     </Can>
                     <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700">

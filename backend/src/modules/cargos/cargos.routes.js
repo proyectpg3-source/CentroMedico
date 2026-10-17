@@ -4,6 +4,8 @@ const pool = require("../../config/db");
 const { getTrimmedString, getOptionalId, parseEntityId, sendInvalidId, handleDatabaseError, parsePagination, buildPaginatedResponse } = require("../../utils/validators");
 const { fetchChargeById } = require("../../utils/cargosService");
 const { CARGO_SELECT } = require("../../utils/queries");
+const { streamEstadoCuenta } = require("./estadoCuenta");
+const { logAuditEvent } = require("../../services/audit");
 
 async function getAll(query) {
   const { page, limit, offset } = parsePagination(query);
@@ -39,6 +41,20 @@ router.use(requireRole("admin", "recepcionista", "fundacion"));
 router.get("/", async (req, res) => {
   try { res.json(await getAll(req.query)); }
   catch (error) { handleDatabaseError(error, res, "Error al obtener los cargos."); }
+});
+
+router.get("/estado-cuenta/:id", requireRole("admin", "recepcionista"), async (req, res) => {
+  try {
+    const id = parseEntityId(req.params.id);
+    if (!id) return sendInvalidId(res, "paciente");
+    const issuedBy = req.usuario?.nombre || req.usuario?.email || "usuario";
+    const found = await streamEstadoCuenta(id, issuedBy, res);
+    if (!found) return res.status(404).json({ message: "Paciente no encontrado." });
+    await logAuditEvent({ usuario: req.usuario, accion: "paciente.estado_cuenta_generado", entidad: "paciente", idEntidad: id, descripcion: `Genero el estado de cuenta del paciente #${id}.` });
+  } catch (error) {
+    if (res.headersSent) return res.end();
+    handleDatabaseError(error, res, "Error al generar el estado de cuenta.");
+  }
 });
 
 router.get("/:id", async (req, res) => {

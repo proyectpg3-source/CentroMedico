@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { Link } from "react-router";
+import { useAuth } from "../auth/AuthContext";
+import { canAccess } from "../auth/roles";
+import { ClipboardPlus } from "lucide-react";
 import { Header } from "../components/layout/Header";
 import {
   Activity,
@@ -181,7 +185,7 @@ function KpiCard({
   loading?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="clinic-kpi rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -190,7 +194,7 @@ function KpiCard({
           ) : (
             <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
           )}
-          <p className="mt-2 truncate text-xs text-muted-foreground">{description}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${tone}`}>
           <Icon className="h-5 w-5" />
@@ -214,7 +218,7 @@ function SectionCard({
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-border bg-card p-5 shadow-sm ${className}`}>
+    <div className={`clinic-dashboard-section rounded-2xl border border-border bg-card p-5 shadow-sm ${className}`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-foreground">{title}</h3>
@@ -228,11 +232,24 @@ function SectionCard({
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const role = user?.rol;
+  const canReadPatients = canAccess(role, "/patients");
+  const canReadClinical = canAccess(role, "/prioritization");
+  const canReadFinance = canAccess(role, "/billing");
+  const quickActions = [
+    { to: "/atencion-rapida", title: "Atención rápida", detail: "Ingreso sin cita ni ficha previa", icon: ClipboardPlus },
+    { to: "/patients", title: "Pacientes", detail: "Registro y seguimiento", icon: Users },
+    { to: "/appointments", title: "Citas médicas", detail: "Organizar la agenda", icon: CalendarDays },
+    { to: "/triage", title: "Triaje", detail: "Evaluación inicial", icon: ClipboardPlus },
+    { to: "/billing", title: "Cuentas y pagos", detail: "Consultar saldos", icon: Wallet },
+  ].filter(action => canAccess(role, action.to));
   const [state, setState] = useState<DashboardState>(buildFallbackState);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
+    setIsLoading(true);
 
     async function loadDashboard() {
       const [
@@ -247,12 +264,12 @@ export default function Dashboard() {
       ] = await Promise.allSettled([
         fetchDashboardSummary(controller.signal),
         fetchHealthStatus(controller.signal),
-        fetchPatients(controller.signal),
+        canReadPatients ? fetchPatients(controller.signal) : Promise.resolve(null),
         fetchDoctors(undefined, controller.signal),
         fetchAppointments(undefined, controller.signal),
-        fetchAnalysisIndicators(controller.signal),
-        fetchPriorityQueue(controller.signal),
-        fetchCharges(undefined, controller.signal),
+        canReadClinical ? fetchAnalysisIndicators(controller.signal) : Promise.resolve(null),
+        canReadClinical ? fetchPriorityQueue(controller.signal) : Promise.resolve(null),
+        canReadFinance ? fetchCharges(undefined, controller.signal) : Promise.resolve(null),
       ]);
 
       if (controller.signal.aborted) {
@@ -292,7 +309,7 @@ export default function Dashboard() {
     void loadDashboard();
 
     return () => controller.abort();
-  }, []);
+  }, [canReadPatients, canReadClinical, canReadFinance]);
 
   const todayKey = toLocalDateKey();
 
@@ -473,19 +490,26 @@ export default function Dashboard() {
   const patientsTotal = state.summary?.total_pacientes ?? state.patients?.length ?? null;
   const doctorsTotal = state.summary?.total_medicos ?? state.doctors?.length ?? null;
   const appointmentsTotal = state.summary?.total_citas ?? state.appointments?.length ?? null;
-  const liveAppointmentsToday = todayAgenda.length;
+  const liveAppointmentsToday = state.appointments ? todayAgenda.length : null;
   const esperaPromedio = state.indicators?.espera_promedio_minutos ?? null;
   const altaPrioridad = state.indicators?.citas_alta_prioridad ?? null;
   const operationalText =
     state.health?.status === "ok" && state.health.database === "connected"
-      ? "API y base de datos conectadas"
-      : "Conexión pendiente de verificar";
+      ? "Sistema disponible"
+      : "Conexión por verificar";
 
   return (
     <div className="flex min-h-full flex-col">
-      <Header title="Dashboard General" subtitle="Resumen operativo del centro médico y seguimiento diario" />
+      <Header title="Vista general" subtitle="La actividad de tu centro médico, en un solo lugar." />
 
-      <div className="flex-1 space-y-6 p-4 lg:p-6">
+      <div className="clinic-dashboard flex-1 space-y-6 p-4 lg:p-6">
+        <div className="clinic-dashboard-intro flex items-end justify-between gap-4">
+          <div><p className="mb-2 text-xs font-medium text-primary">Atención y seguimiento</p><h2 className="text-3xl font-semibold tracking-tight text-foreground">El pulso de La Aurora</h2></div>
+          <span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="h-4 w-4" />Resumen de la jornada</span>
+        </div>
+        <nav aria-label="Accesos rápidos" className="clinic-quick-actions">
+          {quickActions.map(({ to, title, detail, icon: Icon }) => <Link key={to} to={to} className="clinic-quick-action"><Icon className="h-5 w-5" aria-hidden="true" /><span><strong>{title}</strong><small>{detail}</small></span><ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link>)}
+        </nav>
         {state.warnings.length > 0 && (
           <div className="rounded-2xl border border-warning/30 bg-warning-bg px-5 py-4 shadow-sm">
             <div className="flex items-start gap-3">
@@ -502,19 +526,19 @@ export default function Dashboard() {
 
         {/* KPIs clinicos principales: cada uno habilita una decision concreta
             (staffing, priorizacion, cobros) en vez de solo llenar espacio. */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="clinic-metrics grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             title="Pacientes registrados"
             value={patientsTotal?.toLocaleString("es-MX") ?? "—"}
-            description={state.patients ? "Pacientes en el sistema" : "Datos no disponibles"}
+            description={patientsTotal != null ? "Pacientes en el sistema" : "Datos no disponibles"}
             icon={Users}
             tone="bg-accent text-accent-foreground"
             loading={isLoading}
           />
           <KpiCard
             title="Citas de hoy"
-            value={liveAppointmentsToday.toLocaleString("es-MX")}
-            description={liveAppointmentsToday > 0 ? "Agenda activa para hoy" : "Sin citas registradas hoy"}
+            value={liveAppointmentsToday?.toLocaleString("es-GT") ?? "—"}
+            description={liveAppointmentsToday == null ? "Datos no disponibles" : liveAppointmentsToday > 0 ? "Agenda activa para hoy" : "Sin citas registradas hoy"}
             icon={CalendarDays}
             tone="bg-primary/10 text-primary"
             loading={isLoading}
@@ -636,6 +660,7 @@ export default function Dashboard() {
               </span>
             }
           >
+            {isLoading ? <Skeleton className="h-[260px] w-full" /> : state.summary?.citas_por_mes?.some(item => item.citas > 0) ? (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={state.summary?.citas_por_mes ?? []}>
                 <defs>
@@ -651,10 +676,12 @@ export default function Dashboard() {
                 <Area type="monotone" dataKey="citas" stroke="#059669" strokeWidth={2.5} fill="url(#dashboard-area-fill)" />
               </AreaChart>
             </ResponsiveContainer>
+            ) : <div className="clinic-chart-empty"><TrendingUp className="h-7 w-7" aria-hidden="true" /><strong>{state.summary ? "Todavía no hay una tendencia" : "Tendencia no disponible"}</strong><p>{state.summary ? "Las citas registradas aparecerán aquí para mostrar la actividad de los últimos meses." : "No pudimos cargar estos datos. Intenta recargar la página."}</p></div>}
+
           </SectionCard>
 
           <SectionCard title="Prioridad clínica activa" subtitle="Distribución de citas activas por urgencia">
-            <ResponsiveContainer width="100%" height={190}>
+            {priorityDistribution.length ? <ResponsiveContainer width="100%" height={190}>
               <PieChart>
                 <Pie data={priorityDistribution} dataKey="value" nameKey="name" innerRadius={48} outerRadius={72} paddingAngle={4}>
                   {priorityDistribution.map((item) => (
@@ -663,7 +690,7 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip formatter={(value) => [`${value}`, "Citas"]} />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> : null}
             <div className="space-y-2">
               {priorityDistribution.length > 0 ? (
                 priorityDistribution.map((item) => (
@@ -676,7 +703,7 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <p className="py-2 text-center text-xs text-muted-foreground">Sin citas activas para clasificar.</p>
+                <p className="py-6 text-center text-xs text-muted-foreground">{state.appointments ? "Sin citas activas para clasificar." : "Datos no disponibles."}</p>
               )}
             </div>
           </SectionCard>

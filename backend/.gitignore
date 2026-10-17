@@ -1,4 +1,9 @@
 node_modules/
 .env
+.env.*
+!.env.example
 .vs/
 npm-debug.log*
+*.log
+backend-dev*.log
+output/

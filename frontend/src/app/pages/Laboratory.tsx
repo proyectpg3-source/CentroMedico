@@ -18,7 +18,7 @@ import {
   type LaboratoryOrderStatus,
   type LaboratoryPriority,
 } from "../api/laboratory";
-import { fetchPatients, type PatientRecord } from "../api/patients";
+import { fetchPatientOptions, type PatientOption } from "../api/patients";
 import { fetchVisits, type VisitRecord } from "../api/visits";
 import {
   AlertCircle,
@@ -164,7 +164,7 @@ function OrderFormModal({
   isSubmitting,
   errorMessage,
 }: {
-  patients: PatientRecord[];
+  patients: PatientOption[];
   appointments: AppointmentRecord[];
   visits: VisitRecord[];
   onClose: () => void;
@@ -222,7 +222,7 @@ function OrderFormModal({
                 <option value="">Selecciona un paciente</option>
                 {patients.map((patient) => (
                   <option key={patient.id_paciente} value={patient.id_paciente}>
-                    {patient.nombre} - {patient.dni}
+                    {patient.nombre} - #{patient.id_paciente}
                   </option>
                 ))}
               </select>
@@ -566,7 +566,7 @@ function SupplyFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Guardar insumo
@@ -696,7 +696,7 @@ export default function Laboratory() {
   const [orders, setOrders] = useState<LabOrderRecord[]>([]);
   const [supplies, setSupplies] = useState<LabSupplyRecord[]>([]);
   const [supplyAlerts, setSupplyAlerts] = useState<LabSupplyAlertsResponse>(() => buildEmptyAlerts());
-  const [patients, setPatients] = useState<PatientRecord[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
   const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
   const [visits, setVisits] = useState<VisitRecord[]>([]);
   const [search, setSearch] = useState("");
@@ -731,7 +731,7 @@ export default function Laboratory() {
           fetchLabOrders(undefined, signal),
           fetchLabSupplies(undefined, signal),
           fetchLabSupplyAlerts(signal),
-          fetchPatients(signal),
+          fetchPatientOptions(signal),
           fetchAppointments(undefined, signal),
           fetchVisits(undefined, signal),
         ]);
@@ -1015,7 +1015,7 @@ export default function Laboratory() {
                   setSubmitError(null);
                   setShowOrderModal(true);
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
               >
                 <FilePlus2 className="h-4 w-4" />
                 Nueva orden
@@ -1219,7 +1219,7 @@ export default function Laboratory() {
                     setSelectedSupply(null);
                     setShowSupplyModal(true);
                   }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-700"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4" />
                   Nuevo insumo

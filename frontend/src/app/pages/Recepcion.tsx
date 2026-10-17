@@ -258,7 +258,7 @@ export default function Recepcion() {
                 <button
                   onClick={handleRegister}
                   disabled={saving}
-                  className="px-4 py-2 bg-[#2563eb] text-white text-sm rounded-lg disabled:opacity-60"
+                  className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg disabled:opacity-60"
                 >
                   {saving ? "Guardando..." : "Registrar"}
                 </button>

@@ -6,8 +6,9 @@ const {
   parseMoney, parseEntityId, sendInvalidId, handleDatabaseError,
   parsePagination, buildPaginatedResponse,
 } = require("../../utils/validators");
-const { fetchChargeById, refreshChargeStatus } = require("../../utils/cargosService");
+const { refreshChargeStatus } = require("../../utils/cargosService");
 const { PAGO_SELECT } = require("../../utils/queries");
+const { logAuditEvent } = require("../../services/audit");
 
 const ALLOWED_ORIGINS = new Set(["consulta", "laboratorio", "farmacia"]);
 
@@ -62,37 +63,71 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const client = await pool.connect();
+  const pago = sanitize(req.body);
+  if (!validate(pago, res)) return;
+
+  let client;
+  let inTransaction = false;
   try {
-    const pago = sanitize(req.body);
-    if (!validate(pago, res)) return;
-
-    const cargo = await fetchChargeById(pago.id_cargo, client);
-    if (!cargo) return res.status(404).json({ message: "Cargo no encontrado." });
-
-    if (!ALLOWED_ORIGINS.has(cargo.origen)) return res.status(400).json({ message: "El cargo asociado no pertenece a un origen valido." });
-    if (Number(cargo.saldo || 0) <= 0) return res.status(400).json({ message: "El cargo ya se encuentra completamente pagado." });
-    if (pago.monto > Number(cargo.saldo || 0)) return res.status(400).json({ message: "El pago no puede exceder el saldo pendiente del cargo." });
-
+    client = await pool.connect();
     await client.query("BEGIN");
+    inTransaction = true;
+
+    // Bloquea la fila del cargo: dos pagos simultaneos se ejecutan en serie,
+    // asi el saldo se valida con el valor real y no puede excederse.
+    const locked = await client.query(
+      "SELECT * FROM cargos_paciente WHERE id_cargo = $1 FOR UPDATE",
+      [pago.id_cargo]
+    );
+    if (!locked.rows[0]) {
+      await client.query("ROLLBACK");
+      inTransaction = false;
+      return res.status(404).json({ message: "Cargo no encontrado." });
+    }
+
+    const cargo = locked.rows[0];
+    const rejection =
+      pago.id_paciente && pago.id_paciente !== cargo.id_paciente ? "El paciente no corresponde al cargo."
+      : !ALLOWED_ORIGINS.has(cargo.origen) ? "El cargo asociado no pertenece a un origen valido."
+      : Number(cargo.saldo || 0) <= 0 ? "El cargo ya se encuentra completamente pagado."
+      : pago.monto > Number(cargo.saldo || 0) ? "El pago no puede exceder el saldo pendiente del cargo."
+      : null;
+
+    if (rejection) {
+      await client.query("ROLLBACK");
+      inTransaction = false;
+      return res.status(400).json({ message: rejection });
+    }
 
     const result = await client.query(
       `INSERT INTO pagos (id_paciente,id_cargo,monto,fecha_pago,metodo,referencia,observaciones,created_at)
        VALUES ($1,$2,$3,COALESCE($4::timestamptz,NOW()),$5,$6,$7,NOW()) RETURNING id_pago`,
-      [pago.id_paciente || cargo.id_paciente, pago.id_cargo, pago.monto, pago.fecha_pago || null, pago.metodo, pago.referencia, pago.observaciones]
+      [cargo.id_paciente, pago.id_cargo, pago.monto, pago.fecha_pago || null, pago.metodo, pago.referencia, pago.observaciones]
     );
     const idPago = result.rows[0].id_pago;
     const refreshedCharge = await refreshChargeStatus(client, pago.id_cargo);
 
     await client.query("COMMIT");
+    inTransaction = false;
+
+    await logAuditEvent({
+      usuario: req.usuario,
+      accion: "pago.registrado",
+      entidad: "pago",
+      idEntidad: idPago,
+      descripcion: `Registro un pago de ${pago.monto} al cargo #${pago.id_cargo}.`,
+      metadata: { monto: pago.monto, metodo: pago.metodo, id_cargo: pago.id_cargo },
+    });
 
     const savedPayment = await getPaymentById(idPago, pool);
     res.status(201).json({ pago: savedPayment, cargo: refreshedCharge });
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (inTransaction) {
+      try { await client.query("ROLLBACK"); } catch (rollbackError) { console.error(rollbackError); }
+    }
     handleDatabaseError(error, res, "Error al registrar el pago.");
   } finally {
-    client.release();
+    client?.release();
   }
 });
 

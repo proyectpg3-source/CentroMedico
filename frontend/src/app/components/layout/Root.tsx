@@ -45,11 +45,12 @@ export function Root() {
 
   return (
     <LayoutChromeProvider value={chrome}>
-      <div className="clinic-shell flex h-screen overflow-hidden bg-background text-foreground">
+      <div className="clinic-shell flex h-dvh overflow-hidden bg-background text-foreground">
+        <a href="#main-content" className="clinic-skip-link">Saltar al contenido</a>
         <Sidebar />
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
 
-          <main className="relative flex-1 overflow-y-auto">
+          <main id="main-content" tabIndex={-1} className="relative flex-1 overflow-y-auto">
             <Outlet />
           </main>
         </div>

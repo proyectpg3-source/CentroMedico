@@ -24,6 +24,24 @@ export interface PatientPayload {
   contacto_emergencia?: string | null;
 }
 
+export type PatientOption = Pick<PatientRecord, "id_paciente" | "nombre">;
+
+export async function fetchPatientOptions(signal?: AbortSignal) {
+  const result = await request<PaginatedResponse<PatientOption>>(
+    "/api/pacientes/opciones?limit=100", { method: "GET", signal },
+    "No se pudieron obtener las opciones de pacientes."
+  );
+  return result.data;
+}
+
+export async function fetchPatientCount(signal?: AbortSignal) {
+  const result = await request<PaginatedResponse<PatientOption>>(
+    "/api/pacientes/opciones?limit=1", { method: "GET", signal },
+    "No se pudo obtener el total de pacientes."
+  );
+  return result.meta.total;
+}
+
 export async function fetchPatients(signal?: AbortSignal) {
   const response = await request<PatientRecord[] | PaginatedResponse<PatientRecord>>(
     "/api/pacientes",

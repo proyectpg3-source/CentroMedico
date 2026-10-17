@@ -180,7 +180,7 @@ function TriageModal({
             <p className="text-xs text-slate-500">La prioridad calculada debe ser confirmada por personal clinico.</p>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60">
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 Guardar triaje
               </button>
@@ -287,7 +287,7 @@ export default function Triage() {
                   <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{triage?.motivo_consulta || appointment.motivo || "Sin motivo registrado"}</p>
                   {triage && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">P/A {triage.presion_arterial || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">FC {triage.frecuencia_cardiaca || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">T {triage.temperatura || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">SpO2 {triage.saturacion_oxigeno || "-"}%</span></div>}
                   <Can module="triage" action="edit">
-                    <button type="button" onClick={() => setSelected(appointment)} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"><HeartPulse className="h-4 w-4" />{triage ? "Actualizar triaje" : "Registrar triaje"}</button>
+                    <button type="button" onClick={() => setSelected(appointment)} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"><HeartPulse className="h-4 w-4" />{triage ? "Actualizar triaje" : "Registrar triaje"}</button>
                   </Can>
                 </article>
               );
