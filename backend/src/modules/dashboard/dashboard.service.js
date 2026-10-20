@@ -34,35 +34,36 @@ async function getResumen() {
     `),
     pool.query(`
       SELECT
-        (SELECT COUNT(*)::float FROM visitas_medicas) /
-        NULLIF((SELECT COUNT(*)::float FROM citas), 0) * 100 as tasa_conversion,
+        COALESCE((SELECT COUNT(*)::float FROM visitas_medicas) /
+        NULLIF((SELECT COUNT(*)::float FROM citas), 0) * 100, 0) as tasa_conversion,
 
-        AVG(EXTRACT(EPOCH FROM (v.fecha_visita - t.fecha_triaje)) / 3600)::float as tiempo_espera_promedio_horas
+        COALESCE(AVG(EXTRACT(EPOCH FROM (v.fecha_visita - t.fecha_triaje)) / 3600), 0)::float as tiempo_espera_promedio_horas
       FROM visitas_medicas v
       JOIN triajes t ON v.id_cita = t.id_cita
     `),
     pool.query(`
       SELECT
-        (SELECT COALESCE(SUM(monto), 0)::float FROM pagos) as recaudado,
-        (SELECT COALESCE(SUM(saldo), 0)::float FROM cargos_paciente) as pendiente,
-        (SELECT COUNT(*)::int FROM cargos_paciente WHERE saldo > 0) as cargos_pendientes
+        COALESCE((SELECT SUM(monto) FROM pagos), 0)::float as recaudado,
+        COALESCE((SELECT SUM(saldo) FROM cargos_paciente), 0)::float as pendiente,
+        COALESCE((SELECT COUNT(*)::int FROM cargos_paciente WHERE saldo > 0), 0) as cargos_pendientes
     `)
   ]);
 
-  const recaudado = financialResult.rows[0].recaudado;
-  const pendiente = financialResult.rows[0].pendiente;
+  const financialData = financialResult.rows[0] || { recaudado: 0, pendiente: 0, cargos_pendientes: 0 };
+  const recaudado = financialData.recaudado || 0;
+  const pendiente = financialData.pendiente || 0;
   const indiceCobrabilidad = (recaudado / NULLIF(recaudado + pendiente, 0)) * 100;
 
   return {
     ...countsResult.rows[0],
     citas_por_estado: estadosResult.rows,
     citas_por_mes: tendenciaResult.rows,
-    operativa: operationalResult.rows[0],
+    operativa: operationalResult.rows[0] || { tasa_conversion: 0, tiempo_espera_promedio_horas: 0 },
     financiera: {
       recaudado,
       pendiente,
       indiceCobrabilidad: isNaN(indiceCobrabilidad) ? 0 : indiceCobrabilidad,
-      cargos_pendientes: financialResult.rows[0].cargos_pendientes
+      cargos_pendientes: financialData.cargos_pendientes || 0,
     },
   };
 }
