@@ -4,13 +4,23 @@ const pool = require("../../config/db");
 const {
   getTrimmedString, getOptionalString, getOptionalId, isValidDateTime,
   parseMoney, parseEntityId, sendInvalidId, handleDatabaseError,
-  parsePagination, buildPaginatedResponse,
+  parsePagination, buildPaginatedResponse, validateSATS,
 } = require("../../utils/validators");
 const { refreshChargeStatus } = require("../../utils/cargosService");
 const { PAGO_SELECT } = require("../../utils/queries");
 const { logAuditEvent } = require("../../services/audit");
 
 const ALLOWED_ORIGINS = new Set(["consulta", "laboratorio", "farmacia"]);
+
+const SATS_RULES_PAGO = {
+  id_cargo: { required: true, type: 'id' },
+  id_paciente: { required: false, type: 'id' },
+  monto: { required: true, type: 'money' },
+  fecha_pago: { required: false, type: 'date' },
+  metodo: { required: true, type: 'string' },
+  referencia: { required: false, type: 'string' },
+  observaciones: { required: false, type: 'string' },
+};
 
 function sanitize(body) {
   return {
@@ -63,8 +73,11 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const pago = sanitize(req.body);
-  if (!validate(pago, res)) return;
+  const { valid, sanitizedData, errors } = validateSATS(req.body, SATS_RULES_PAGO);
+  if (!valid) {
+    return res.status(400).json({ message: "Error de validación SATS", details: errors });
+  }
+  const pago = sanitizedData;
 
   let client;
   let inTransaction = false;

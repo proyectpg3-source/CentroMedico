@@ -1,7 +1,7 @@
 const pool = require("../../config/db");
 
 async function getResumen() {
-  const [countsResult, estadosResult, tendenciaResult] = await Promise.all([
+  const [countsResult, estadosResult, tendenciaResult, operationalResult, financialResult] = await Promise.all([
     pool.query(`
       SELECT
         (SELECT COUNT(*)::int FROM pacientes) AS total_pacientes,
@@ -30,14 +30,40 @@ async function getResumen() {
       FROM meses m
       LEFT JOIN citas c ON c.fecha_hora >= m.mes AT TIME ZONE 'America/Guatemala'
         AND c.fecha_hora < (m.mes + INTERVAL '1 month') AT TIME ZONE 'America/Guatemala'
-      GROUP BY m.mes ORDER BY m.mes
+      GROUP BY m.mes ORDER by m.mes
     `),
+    pool.query(`
+      SELECT
+        (SELECT COUNT(*)::float FROM visitas_medicas) /
+        NULLIF((SELECT COUNT(*)::float FROM citas), 0) * 100 as tasa_conversion,
+
+        AVG(EXTRACT(EPOCH FROM (v.fecha_visita - t.fecha_triaje)) / 3600)::float as tiempo_espera_promedio_horas
+      FROM visitas_medicas v
+      JOIN triajes t ON v.id_cita = t.id_cita
+    `),
+    pool.query(`
+      SELECT
+        (SELECT COALESCE(SUM(monto), 0)::float FROM pagos) as recaudado,
+        (SELECT COALESCE(SUM(saldo), 0)::float FROM cargos_paciente) as pendiente,
+        (SELECT COUNT(*)::int FROM cargos_paciente WHERE saldo > 0) as cargos_pendientes
+    `)
   ]);
+
+  const recaudado = financialResult.rows[0].recaudado;
+  const pendiente = financialResult.rows[0].pendiente;
+  const indiceCobrabilidad = (recaudado / NULLIF(recaudado + pendiente, 0)) * 100;
 
   return {
     ...countsResult.rows[0],
     citas_por_estado: estadosResult.rows,
     citas_por_mes: tendenciaResult.rows,
+    operativa: operationalResult.rows[0],
+    financiera: {
+      recaudado,
+      pendiente,
+      indiceCobrabilidad: isNaN(indiceCobrabilidad) ? 0 : indiceCobrabilidad,
+      cargos_pendientes: financialResult.rows[0].cargos_pendientes
+    },
   };
 }
 

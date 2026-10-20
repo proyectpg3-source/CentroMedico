@@ -12,11 +12,13 @@ import {
   Stethoscope,
   Thermometer,
   X,
+  AlertTriangle,
+  Check,
 } from "lucide-react";
 import { Header } from "../components/layout/Header";
 import { Can } from "../auth/usePermissions";
 import { fetchAppointments, type AppointmentRecord } from "../api/appointments";
-import { fetchTriages, saveTriage, type TriageRecord } from "../api/triage";
+import { fetchTriages, saveTriage, validateTriage, type TriageRecord } from "../api/triage";
 import type { ClinicalPriority } from "../api/analysis";
 import { formatDateTime, getErrorMessage } from "../lib/format";
 
@@ -76,7 +78,11 @@ function TriageModal({
 }) {
   const [form, setForm] = useState(() => buildForm(appointment, triage));
   const [saving, setSaving] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [proposedTriage, setProposedTriage] = useState<TriageRecord | null>(null);
+  const [customPriority, setCustomPriority] = useState<string>("");
+  const [justification, setJustification] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,11 +103,28 @@ function TriageModal({
         peso: optionalNumber(form.peso),
         observaciones: form.observaciones.trim() || null,
       });
-      onSaved(record);
+      setProposedTriage(record);
     } catch (saveError) {
       setError(getErrorMessage(saveError, "No se pudo guardar el triaje."));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleValidate(finalPriority: string) {
+    setValidating(true);
+    setError(null);
+    try {
+      await validateTriage({
+        id_cita: appointment.id_cita,
+        prioridad_final: finalPriority,
+        justificacion: customPriority !== proposedTriage?.prioridad_clinica ? justification : null,
+      });
+      onSaved(proposedTriage!);
+    } catch (valError) {
+      setError(getErrorMessage(valError, "No se pudo validar la prioridad."));
+    } finally {
+      setValidating(false);
     }
   }
 
@@ -121,72 +144,147 @@ function TriageModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-6">
-          {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+        {!proposedTriage ? (
+          <form onSubmit={handleSubmit} className="space-y-6 p-6">
+            {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-          <section>
-            <h3 className="text-sm font-semibold text-slate-900">Evaluacion inicial</h3>
-            <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div>
-                <label className="text-sm text-slate-700">Motivo de consulta *</label>
-                <textarea required rows={3} value={form.motivo_consulta} onChange={(event) => setForm((current) => ({ ...current, motivo_consulta: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Historia de la enfermedad actual</label>
-                <textarea rows={3} value={form.historia_enfermedad_actual} onChange={(event) => setForm((current) => ({ ...current, historia_enfermedad_actual: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Antecedentes relevantes</label>
-                <textarea rows={2} value={form.antecedentes_relevantes} onChange={(event) => setForm((current) => ({ ...current, antecedentes_relevantes: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Alergias referidas</label>
-                <textarea rows={2} value={form.alergias_referidas} onChange={(event) => setForm((current) => ({ ...current, alergias_referidas: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-sm font-semibold text-slate-900">Signos vitales</h3>
-            <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-              {[
-                ["presion_arterial", "P/A", "110/70"],
-                ["frecuencia_cardiaca", "FC (lpm)", "80"],
-                ["frecuencia_respiratoria", "FR (rpm)", "18"],
-                ["temperatura", "Temperatura C", "36.5"],
-                ["saturacion_oxigeno", "SpO2 %", "97"],
-                ["peso", "Peso kg", "65"],
-              ].map(([field, label, placeholder]) => (
-                <div key={field}>
-                  <label className="text-xs font-medium text-slate-600">{label}</label>
-                  <input
-                    inputMode={field === "presion_arterial" ? "text" : "decimal"}
-                    value={form[field as keyof TriageFormState]}
-                    onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
-                    placeholder={placeholder}
-                    className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                  />
+            <section>
+              <h3 className="text-sm font-semibold text-slate-900">Evaluacion inicial</h3>
+              <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div>
+                  <label className="text-sm text-slate-700">Motivo de consulta *</label>
+                  <textarea required rows={3} value={form.motivo_consulta} onChange={(event) => setForm((current) => ({ ...current, motivo_consulta: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                </div}
+                <div>
+                  <label className="text-sm text-slate-700">Historia de la enfermedad actual</label>
+                  <textarea rows={3} value={form.historia_enfermedad_actual} onChange={(event) => setForm((current) => ({ ...current, historia_enfermedad_actual: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                </div}
+                <div>
+                  <label className="text-sm text-slate-700">Antecedentes relevantes</label>
+                  <textarea rows={2} value={form.antecedentes_relevantes} onChange={(event) => setForm((current) => ({ ...current, antecedentes_relevantes: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
                 </div>
-              ))}
+                <div>
+                  <label className="text-sm text-slate-700">Alergias referidas</label>
+                  <textarea rows={2} value={form.alergias_referidas} onChange={(event) => setForm((current) => ({ ...current, alergias_referidas: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-sm font-semibold text-slate-900">Signos vitales</h3>
+              <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                {[
+                  ["presion_arterial", "P/A", "110/70"],
+                  ["frecuencia_cardiaca", "FC (lpm)", "80"],
+                  ["frecuencia_respiratoria", "FR (rpm)", "18"],
+                  ["temperatura", "Temperatura C", "36.5"],
+                  ["saturacion_oxigeno", "SpO2 %", "97"],
+                  ["peso", "Peso kg", "65"],
+                ].map(([field, label, placeholder]) => (
+                  <div key={field}>
+                    <label className="text-xs font-medium text-slate-600">{label}</label>
+                    <input
+                      inputMode={field === "presion_arterial" ? "text" : "decimal"}
+                      value={form[field as keyof TriageFormState]}
+                      onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                      placeholder={placeholder}
+                      className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div>
+              <label className="text-sm text-slate-700">Observaciones de enfermeria</label>
+              <textarea rows={3} value={form.observaciones} onChange={(event) => setForm((current) => ({ ...current, observaciones: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
             </div>
-          </section>
 
-          <div>
-            <label className="text-sm text-slate-700">Observaciones de enfermeria</label>
-            <textarea rows={3} value={form.observaciones} onChange={(event) => setForm((current) => ({ ...current, observaciones: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
-          </div>
+            <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-slate-500">La prioridad calculada debe ser confirmada por personal clinico.</p>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60">
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Guardar triaje
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-6 p-6">
+            {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-          <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-500">La prioridad calculada debe ser confirmada por personal clinico.</p>
-            <div className="flex justify-end gap-3">
-              <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-              <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60">
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                Guardar triaje
+            <div className="rounded-2xl border-2 border-blue-100 bg-blue-50/50 p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-900">Propuesta de Prioridad SATS</h3>
+                  <p className="text-sm text-blue-700">Validación profesional requerida para ingreso a cola médica</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="rounded-xl bg-white p-4 shadow-sm border border-blue-100">
+                  <p className="text-xs font-medium uppercase text-slate-500 mb-2">Sugerencia Algorítmica</p>
+                  <div className="flex items-center gap-3">
+                    <span className={`rounded-full px-3 py-1 text-lg font-bold ${priorityMeta[proposedTriage.prioridad_clinica].badge}`}>
+                      {priorityMeta[proposedTriage.prioridad_clinica].label}
+                    </span>
+                    <span className="text-sm text-slate-600">{proposedTriage.puntaje_prioridad} puntos TEWS</span>
+                  </div>
+                  <div className="mt-4 p-3 rounded-lg bg-slate-50 text-xs text-slate-600 leading-relaxed italic">
+                    "{proposedTriage.motivos_prioridad}"
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Confirmar Prioridad Final</label>
+                    <select
+                      value={customPriority || proposedTriage.prioridad_clinica}
+                      onChange={(e) => setCustomPriority(e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                    >
+                      {Object.entries(priorityMeta).map(([key, meta]) => (
+                        <option key={key} value={key}>{meta.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {customPriority && customPriority !== proposedTriage.prioridad_clinica && (
+                    <div>
+                      <label className="text-xs font-medium text-rose-600">Justificación del Cambio *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        value={justification}
+                        onChange={(e) => setJustification(e.target.value)}
+                        placeholder="Explique la razón clínica del cambio..."
+                        className="mt-1.5 w-full resize-none rounded-lg border border-rose-200 px-3 py-2 text-sm outline-none focus:border-rose-500"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button type="button" onClick={() => setProposedTriage(null)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50">Volver a editar</button>
+              <button
+                type="button"
+                onClick={() => handleValidate(customPriority || proposedTriage.prioridad_clinica)}
+                disabled={validating || (customPriority !== proposedTriage.prioridad_clinica && !justification)}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {validating && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Check className="h-4 w-4" />
+                Validar y Enviar a Cola
               </button>
             </div>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );

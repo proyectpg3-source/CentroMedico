@@ -1,8 +1,15 @@
 const express = require("express");
 const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
-const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
+const { parseEntityId, sendInvalidId, handleDatabaseError, validateSATS } = require("../../utils/validators");
 const { logAuditEvent } = require("../../services/audit");
 const svc = require("./citas.service");
+
+const SATS_RULES_CITA = {
+  id_paciente: { required: true, type: 'id' },
+  id_medico: { required: true, type: 'id' },
+  fecha: { required: true, type: 'date' },
+  motivo: { required: false, type: 'string' },
+};
 
 const router = express.Router();
 router.use(requireAuth);
@@ -24,9 +31,11 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req, res) => {
   try {
-    const data = svc.sanitize(req.body);
-    if (!svc.validate(data, res)) return;
-    const created = await svc.create(req.body);
+    const { valid, sanitizedData, errors } = validateSATS(req.body, SATS_RULES_CITA);
+    if (!valid) {
+      return res.status(400).json({ message: "Error de validación SATS", details: errors });
+    }
+    const created = await svc.create(sanitizedData);
     await logAuditEvent({
       usuario: req.usuario,
       accion: "cita.creada",

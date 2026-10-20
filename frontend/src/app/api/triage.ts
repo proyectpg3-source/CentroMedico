@@ -64,3 +64,18 @@ export function saveTriage(payload: TriagePayload) {
     "No se pudo guardar el triaje."
   );
 }
+
+export async function validateTriage({ id_cita, prioridad_final, justificacion }: { id_cita: number; prioridad_//S_final: string; justificacion: string | null }) {
+  const response = await fetch(`/api/triajes/validar`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_cita, prioridad_final, justificacion }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Error al validar la prioridad.");
+  }
+
+  return response.json();
+}

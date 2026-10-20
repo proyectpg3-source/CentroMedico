@@ -52,9 +52,26 @@ function getPriorityLevel(score) {
   return "baja";
 }
 
+// Equivalencias TEWS -> P1-P4 según propuesta institucional
+function mapTewsToP(score) {
+  if (score >= 7) return "P1";
+  if (score >= 5) return "P2";
+  if (score >= 3) return "P3";
+  return "P4";
+}
+
+// Catálogo de Discriminadores SATS (Elevan la prioridad independientemente del TEWS)
+const SATS_DISCRIMINATORS = {
+  P1: ["convulsion activa", "parada cardiorrespiratoria", "estado de coma", "shock anafilactico"],
+  P2: ["dolor toracico", "dificultad respiratoria grave", "sangrado activo masivo", "dolor intenso"],
+  P3: ["fiebre alta persistente", "dolor abdominal agudo", "deshidratacion moderada"],
+  P4: []
+};
+
 function calculatePriority(input, history = []) {
   const reasons = [];
-  let score = 10;
+  let tewsScore = 0; // Puntaje fisiológico puro
+
   const text = normalizeText(
     [
       input.motivo,
@@ -69,100 +86,55 @@ function calculatePriority(input, history = []) {
     ].join(" ")
   );
 
-  for (const keyword of URGENT_KEYWORDS) {
-    if (text.includes(keyword)) {
-      score += 35;
-      pushUnique(reasons, `Se identifica ${keyword} como signo de alarma.`);
-    }
-  }
-
-  for (const keyword of WARNING_KEYWORDS) {
-    if (keyword === "fiebre" && text.includes("fiebre alta")) {
-      continue;
-    }
-    if (text.includes(keyword)) {
-      score += 16;
-      pushUnique(reasons, `El motivo menciona ${keyword}.`);
-    }
-  }
-
-  const historyText = normalizeText(
-    history
-      .map((item) => [item.motivo, item.diagnostico, item.tratamiento, item.observaciones].join(" "))
-      .join(" ")
-  );
-
-  for (const keyword of CHRONIC_KEYWORDS) {
-    if (historyText.includes(keyword)) {
-      score += 8;
-      pushUnique(reasons, `El historial registra antecedente relacionado con ${keyword}.`);
-    }
-  }
-
-  const repeatedPattern = history.some((item) => {
-    const itemText = normalizeText([item.motivo, item.diagnostico].join(" "));
-    return WARNING_KEYWORDS.some((keyword) => text.includes(keyword) && itemText.includes(keyword));
-  });
-
-  if (repeatedPattern) {
-    score += 12;
-    pushUnique(reasons, "Existen consultas previas con sintomas similares.");
-  }
-
-  if (history.length >= 5) {
-    score += 6;
-    pushUnique(reasons, "Paciente con historial clinico frecuente en el centro medico.");
-  }
-
+  // 1. Cálculo de Puntaje Fisiológico (Simulación TEWS)
   const temperature = Number(input.temperatura);
   const oxygen = Number(input.saturacion_oxigeno);
   const heartRate = Number(input.frecuencia_cardiaca);
   const respiratoryRate = Number(input.frecuencia_respiratoria);
   const systolicPressure = Number.parseInt(String(input.presion_arterial || "").split("/")[0], 10);
 
-  if (Number.isFinite(temperature) && temperature >= 39) {
-    score += 20;
-    pushUnique(reasons, "Temperatura elevada registrada en triaje.");
-  } else if (Number.isFinite(temperature) && temperature > 0 && temperature < 35) {
-    score += 20;
-    pushUnique(reasons, "Temperatura baja registrada en triaje.");
-  }
+  if (Number.isFinite(temperature) && (temperature >= 39 || temperature < 35)) tewsScore += 2;
+  if (Number.isFinite(oxygen) && oxygen < 92) tewsScore += 3;
+  if (Number.isFinite(heartRate) && (heartRate >= 120 || heartRate <= 40)) tewsScore += 2;
+  if (Number.isFinite(respiratoryRate) && (respiratoryRate >= 30 || respiratoryRate <= 8)) tewsScore += 3;
+  if (Number.isFinite(systolicPressure) && (systolicPressure >= 180 || systolicPressure < 90)) tewsScore += 2;
 
-  if (Number.isFinite(oxygen) && oxygen > 0 && oxygen < 92) {
-    score += 35;
-    pushUnique(reasons, "Saturacion de oxigeno en rango de alerta.");
-  } else if (Number.isFinite(oxygen) && oxygen >= 92 && oxygen < 95) {
-    score += 15;
-    pushUnique(reasons, "Saturacion de oxigeno que requiere vigilancia.");
-  }
+  // 2. Propuesta Preliminar basada en TEWS
+  let proposedP = mapTewsToP(tewsScore);
+  let evidence = `Puntaje TEWS: ${tewsScore} (Propuesta preliminar: ${proposedP})`;
 
-  if (Number.isFinite(heartRate) && heartRate > 0 && (heartRate >= 120 || heartRate <= 40)) {
-    score += 15;
-    pushUnique(reasons, "Frecuencia cardiaca fuera del rango esperado.");
-  }
+  // 3. Aplicación de Discriminadores SATS (Elevación de Prioridad)
+  let finalP = proposedP;
+  let discriminatorFound = null;
 
-  if (Number.isFinite(respiratoryRate) && respiratoryRate > 0) {
-    if (respiratoryRate >= 30 || respiratoryRate <= 8) {
-      score += 25;
-      pushUnique(reasons, "Frecuencia respiratoria en rango de alerta.");
-    } else if (respiratoryRate >= 21) {
-      score += 10;
-      pushUnique(reasons, "Frecuencia respiratoria que requiere vigilancia.");
+  // Revisamos desde la prioridad más alta (P1) hacia abajo
+  for (const [level, keywords] of Object.entries(SATS_DISCRIMINATORS)) {
+    for (const keyword of keywords) {
+      if (text.includes(normalizeText(keyword))) {
+        // Solo elevamos la prioridad, nunca la bajamos mediante discriminador
+        const priorityRank = { "P1": 1, "P2": 2, "P3": 3, "P4": 4 };
+        if (priorityRank[level] < priorityRank[finalP]) {
+          finalP = level;
+          discriminatorFound = keyword;
+        }
+        break;
+      }
     }
   }
 
-  if (Number.isFinite(systolicPressure) && systolicPressure > 0 && (systolicPressure >= 180 || systolicPressure < 90)) {
-    score += 20;
-    pushUnique(reasons, "Presion arterial sistolica en rango de alerta.");
+  if (discriminatorFound) {
+    evidence += ` | Discriminador detectado: '${discriminatorFound}'. Prioridad elevada a ${finalP}.`;
   }
 
-  const finalScore = Math.min(score, 100);
+  // Mantenemos compatibilidad con la columna 'prioridad_clinica' (critica, alta, media, baja)
+  const clinicalMapping = { "P1": "critica", "P2": "alta", "P3": "media", "P4": "baja" };
+
   return {
-    puntaje_prioridad: finalScore,
-    prioridad_clinica: getPriorityLevel(finalScore),
-    motivos_prioridad: reasons.length
-      ? reasons.join(" ")
-      : "No se identifican datos de alarma inmediata con la informacion registrada.",
+    puntaje_prioridad: tewsScore,
+    prioridad_clinica: clinicalMapping[finalP],
+    motivos_prioridad: evidence,
+    propuesta_p: finalP, // Nueva propiedad para la propuesta P1-P4
+    evidencia_SATS: evidence
   };
 }
 
