@@ -2,7 +2,7 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
-const scripts = ['test-security.js', 'test-auth-hardening.js', 'test-input-validation.js', 'test-settings.js', 'test-visit-conversion.js', 'test-payment-guard.js'];
+const scripts = ['test-security.js', 'test-auth-hardening.js', 'test-input-validation.js', 'test-settings.js', 'test-visit-conversion.js', 'test-payment-guard.js', 'test-dashboard.js'];
 const results = [];
 for (const script of scripts) {
   const r = spawnSync(process.execPath, [path.join(__dirname, script)], { encoding: 'utf8', windowsHide: true, timeout: 60000 });

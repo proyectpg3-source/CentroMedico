@@ -52,8 +52,8 @@ async function getResumen() {
   const financialData = financialResult.rows[0] || { recaudado: 0, pendiente: 0, cargos_pendientes: 0 };
   const recaudado = financialData.recaudado || 0;
   const pendiente = financialData.pendiente || 0;
- const indiceCobrabilidad = (recaudado / NULLIF(recaudado + pendiente, 0)) * 100;
-
+  const total = recaudado + pendiente;
+  const indiceCobrabilidad = total > 0 ? (recaudado / total) * 100 : 0;
 
   return {
     ...countsResult.rows[0],
