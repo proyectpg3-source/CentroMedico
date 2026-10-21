@@ -1,0 +1,103 @@
+const pool = require("../../config/db");
+const { getTriageConcordance } = require("../analisis/analisis.service");
+
+async function getResumen() {
+  try {
+    const [countsResult, estadosResult, tendenciaResult, operationalResult, financialResult, triageAudit] = await Promise.all([
+      pool.query(`
+        SELECT
+          (SELECT COUNT(*)::int FROM pacientes) AS total_pacientes,
+          (SELECT COUNT(*)::int FROM medicos) AS total_medicos,
+          (SELECT COUNT(*)::int FROM citas) AS total_citas,
+          (SELECT COUNT(*)::int FROM visitas_medicas) AS total_visitas,
+          (SELECT COUNT(*)::int FROM ordenes_laboratorio) AS total_ordenes_laboratorio,
+          (SELECT COUNT(*)::int FROM prescripciones) AS total_prescripciones,
+          (SELECT COUNT(*)::int FROM cargos_paciente) AS total_cargos
+      `),
+      pool.query(`
+        SELECT estado, COUNT(*)::int AS total
+        FROM citas
+        GROUP BY estado
+        ORDER BY estado
+      `),
+      pool.query(`
+        WITH meses AS (
+          SELECT generate_series(
+            date_trunc('month', NOW() AT TIME ZONE 'America/Guatemala') - INTERVAL '5 months',
+            date_trunc('month', NOW() AT TIME ZONE 'America/Guatemala'),
+            INTERVAL '1 month'
+          ) AS mes
+        )
+        SELECT to_char(m.mes, 'YYYY-MM') AS mes, COUNT(c.id_cita)::int AS citas
+        FROM meses m
+        LEFT JOIN citas c ON c.fecha_hora >= m.mes AT TIME ZONE 'America/Guatemala'
+          AND c.fecha_hora < (m.mes + INTERVAL '1 month') AT TIME ZONE 'America/Guatemala'
+        GROUP BY m.mes ORDER by m.mes
+      `),
+      pool.query(`
+        SELECT
+          COALESCE((SELECT COUNT(*)::float FROM visitas_medicas) /
+          NULLIF((SELECT COUNT(*)::float FROM citas), 0) * 100, 0) as tasa_conversion,
+          COALESCE(AVG(EXTRACT(EPOCH FROM (v.fecha_visita - t.fecha_triaje)) / 3600), 0)::float as tiempo_espera_promedio_horas
+        FROM visitas_medicas v
+        JOIN triajes t ON v.id_cita = t.id_cita
+      `),
+      pool.query(`
+        SELECT
+          COALESCE(SUM(monto), 0)::float as recaudado FROM pagos
+      `),
+      pool.query(`
+        SELECT
+          COALESCE(SUM(saldo), 0)::float as pendiente FROM cargos_paciente
+      `),
+      pool.query(`
+        SELECT
+          COUNT(*)::int as cargos_pendientes FROM cargos_paciente WHERE saldo > 0
+      `),
+      getTriageConcordance()
+    ]);
+
+    const counts = countsResult.rows[0] || {};
+    const estados = estadosResult.rows || [];
+    const tendencia = tendenciaResult.rows || [];
+    const operativa = operationalResult.rows[0] || { tasa_conversion: 0, tiempo_espera_promedio_horas: 0 };
+
+    const recaudado = financialResult[0]?.rows[0]?.recaudado || 0;
+    const pendiente = financialResult[1]?.rows[0]?.pendiente || 0;
+    const cargos_pendientes = financialResult[2]?.rows[0]?.cargos_pendientes || 0;
+
+    const indiceCobrabilidad = (recaudado / (recaudado + pendiente)) * 100 || 0;
+
+    return {
+      ...counts,
+      citas_por_estado: estados,
+      citas_por_mes: tendencia,
+      operativa,
+      financiera: {
+        recaudado,
+        pendiente,
+        indiceCobrabilidad: isNaN(indiceCobrabilidad) ? 0 : indiceCobrabilidad,
+        cargos_pendientes,
+      },
+      triage_auditoria: triageAudit,
+    };
+  } catch (error) {
+    console.error("Error en getResumen:", error);
+    return {
+      total_pacientes: 0,
+      total_medicos: 0,
+      total_citas: 0,
+      total_visitas: 0,
+      total_ordenes_laboratorio: 0,
+      total_prescripciones: 0,
+      total_cargos: 0,
+      citas_por_estado: [],
+      citas_por_mes: [],
+      operativa: { tasa_conversion: 0, tiempo_espera_promedio_horas: 0 },
+      financiera: { recaudado: 0, pendiente: 0, indiceCobrabilidad: 0, cargos_pendientes: 0 },
+      triage_auditoria: { accuracy: 0, total: 0, trend: "sin_datos", adjustments: [] },
+    };
+  }
+}
+
+module.exports = { getResumen };

@@ -34,7 +34,24 @@ interface TriageFormState {
   saturacion_oxigeno: string;
   peso: string;
   observaciones: string;
+  discriminadores: string[];
 }
+
+const SATS_DISCRIMINATORS = [
+  { id: "chest_pain", label: "Dolor Torácico", priority: "alta" },
+  { id: "dyspnea", label: "Dificultad Respiratoria", priority: "alta" },
+  { id: "unconscious", label: "Inconsciencia / Alteración Estado Consciente", priority: "critica" },
+  { id: "shock", label: "Signos de Shock", priority: "critica" },
+  { id: "severe_trauma", label: "Trauma Grave", priority: "critica" },
+  { id: "active_bleeding", label: "Hemorragia Activa", priority: "critica" },
+];
+
+const VITAL_RANGES = {
+  frecuencia_cardiaca: { min: 60, max: 100 },
+  frecuencia_respiratoria: { min: 12, max: 20 },
+  temperatura: { min: 36, max: 37.5 },
+  saturacion_oxigeno: { min: 94, max: 100 },
+};
 
 const priorityMeta: Record<ClinicalPriority, { label: string; badge: string; border: string }> = {
   baja: { label: "Baja", badge: "bg-slate-100 text-slate-700", border: "border-l-slate-400" },
@@ -56,6 +73,7 @@ function buildForm(appointment: AppointmentRecord, triage?: TriageRecord): Triag
     saturacion_oxigeno: triage?.saturacion_oxigeno?.toString() || "",
     peso: triage?.peso?.toString() || "",
     observaciones: triage?.observaciones || "",
+    discriminadores: [],
   };
 }
 
@@ -171,6 +189,31 @@ function TriageModal({
             </section>
 
             <section>
+              <h3 className="text-sm font-semibold text-slate-900">Criterios Críticos (SATS)</h3>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {SATS_DISCRIMINATORS.map((disc) => (
+                  <label key={disc.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      checked={form.discriminadores.includes(disc.id)}
+                      onChange={(e) => {
+                        const newDisc = e.target.checked
+                          ? [...form.discriminadores, disc.id]
+                          : form.discriminadores.filter(id => id !== disc.id);
+                        setForm(current => ({ ...current, discriminadores: newDisc }));
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm text-slate-700">{disc.label}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Impacto: {disc.priority}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section>
               <h3 className="text-sm font-semibold text-slate-900">Signos vitales</h3>
               <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
                 {[
@@ -180,18 +223,28 @@ function TriageModal({
                   ["temperatura", "Temperatura C", "36.5"],
                   ["saturacion_oxigeno", "SpO2 %", "97"],
                   ["peso", "Peso kg", "65"],
-                ].map(([field, label, placeholder]) => (
-                  <div key={field}>
-                    <label className="text-xs font-medium text-slate-600">{label}</label>
-                    <input
-                      inputMode={field === "presion_arterial" ? "text" : "decimal"}
-                      value={form[field as keyof TriageFormState]}
-                      onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
-                      placeholder={placeholder}
-                      className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                    />
-                  </div>
-                ))}
+                ].map(([field, label, placeholder]) => {
+                  const val = optionalNumber(form[field as keyof TriageFormState]);
+                  const range = VITAL_RANGES[field as keyof typeof VITAL_RANGES];
+                  const isOutRange = range && (val === null || val < range.min || val > range.max);
+
+                  return (
+                    <div key={field}>
+                      <label className="text-xs font-medium text-slate-600">{label}</label>
+                      <input
+                        inputMode={field === "presion_arterial" ? "text" : "decimal"}
+                        value={form[field as keyof TriageFormState]}
+                        onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
+                        placeholder={placeholder}
+                        className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-blue-500 transition-colors ${
+                          isOutRange
+                            ? "border-rose-300 bg-rose-50 text-rose-700 focus:border-rose-500"
+                            : "border-slate-200 focus:border-blue-500"
+                        }`}
+                      />
+                    </div>
+                  );
+                }))
               </div>
             </section>
 

@@ -370,6 +370,101 @@ async function getIndicadores() {
   };
 }
 
+async function getTriageConcordance() {
+  const result = await pool.query(`
+    SELECT
+      t.id_triaje,
+      t.prioridad_clinica as prioridad_final,
+      c.prioridad_clinica as prioridad_propuesta,
+      t.justificacion_cambio,
+      t.fecha_triaje
+    FROM triajes t
+    JOIN citas c ON t.id_cita = c.id_cita
+    WHERE t.estado_prioridad = 'validado'
+  `);
+
+  const rows = result.rows;
+  const total = rows.length;
+  if (total === 0) return { accuracy: 0, total, adjustments: [], trend: "sin_datos" };
+
+  const matches = rows.filter(r => r.prioridad_final === r.prioridad_propuesta).length;
+  const accuracy = (matches / total) * 100;
+
+  const priorityRank = { "critica": 1, "alta": 2, "media": 3, "baja": 4 };
+  let totalShift = 0;
+
+  const adjustments = rows
+    .filter(r => r.prioridad_final !== r.prioridad_propuesta)
+    .map(r => {
+      const shift = priorityRank[r.prioridad_propuesta] - priorityRank[r.prioridad_final];
+      totalShift += shift;
+      return {
+        id: r.id_triaje,
+        from: r.prioridad_propuesta,
+        to: r.prioridad_final,
+        justification: r.justificacion_cambio,
+        date: r.fecha_triaje
+      };
+    });
+
+  // trend: > 0 significa que el médico suele subir la prioridad (algoritmo conservador)
+  // trend: < 0 significa que el médico suele bajar la prioridad (algoritmo alarmista)
+  let trend = "neutra";
+  if (totalShift > 0) trend = "conservador";
+  if (totalShift < 0) trend = "alarmista";
+
+  return {
+    accuracy,
+    total,
+    trend,
+    adjustments: adjustments.slice(0, 10) // Top 10 ajustes recientes
+  };
+}
+
+async function getFullClinicalHistory(idPaciente) {
+  const [patient, triages, visits, prescriptions, labs] = await Promise.all([
+    pool.query("SELECT * FROM pacientes WHERE id_paciente = $1", [idPaciente]),
+    pool.query("SELECT * FROM triajes WHERE id_paciente = $1 ORDER BY fecha_triaje DESC LIMIT 5", [idPaciente]),
+    pool.query("SELECT * FROM visitas_medicas WHERE id_paciente = $1 ORDER BY fecha_visita DESC LIMIT 10", [idPaciente]),
+    pool.query(`
+      SELECT pr.*, v.fecha_visita
+      FROM prescripciones pr
+      JOIN visitas_medicas v ON pr.id_visita = v.id_visita
+      WHERE v.id_paciente = $1
+      ORDER BY v.fecha_visita DESC LIMIT 20`, [idPaciente]),
+    pool.query(`
+      SELECT orl.*, rl.resultado, rl.fecha_resultado
+      FROM ordenes_laboratorio orl
+      LEFT JOIN resultados_laboratorio rl ON orl.id_orden = rl.id_orden
+      WHERE orl.id_paciente = $1
+      ORDER BY orl.created_at DESC LIMIT 10`, [idPaciente])
+  ]);
+
+  const patientData = patient.rows[0];
+  if (!patientData) throw new Error("Paciente no encontrado");
+
+  // Consolidar alertas de alergias de todas las fuentes
+  const allAllergies = [
+    ...triages.rows.map(t => t.alergias_referidas),
+    ...visits.rows.map(v => v.antecedentes_alergicos)
+  ].filter(Boolean).join("; ");
+
+  return {
+    patient: patientData,
+    currentTriage: triages.rows[0] || null,
+    history: {
+      triages: triages.rows,
+      visits: visits.rows,
+      prescriptions: prescriptions.rows,
+      labs: labs.rows
+    },
+    alerts: {
+      hasAllergies: !!allAllergies,
+      allergies: allAllergies
+    }
+  };
+}
+
 module.exports = {
   calculatePriority,
   calcularPrioridadDesdeEntrada,
@@ -378,4 +473,6 @@ module.exports = {
   recalcularCitasAbiertas,
   getColaPriorizada,
   getIndicadores,
+  getTriageConcordance,
+  getFullClinicalHistory,
 };
