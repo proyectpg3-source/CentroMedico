@@ -8,9 +8,9 @@ export function numericValue(value: number | string | null | undefined) {
 }
 
 export function formatCurrency(value: number | string | null | undefined) {
-  return new Intl.NumberFormat("es-MX", {
+  return new Intl.NumberFormat("es-GT", {
     style: "currency",
-    currency: "MXN",
+    currency: "GTQ",
     minimumFractionDigits: 2,
   }).format(numericValue(value));
 }
@@ -25,7 +25,7 @@ export function formatDate(value: string | null | undefined) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(date);
+  return new Intl.DateTimeFormat("es-GT", { dateStyle: "medium" }).format(date);
 }
 
 export function formatDateTime(value: string | null | undefined) {
@@ -38,7 +38,7 @@ export function formatDateTime(value: string | null | undefined) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("es-MX", {
+  return new Intl.DateTimeFormat("es-GT", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);

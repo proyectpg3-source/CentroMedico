@@ -3,9 +3,21 @@ const { requireAuth, requireRole } = require("../../middlewares/auth.middleware"
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
 const { logAuditEvent } = require("../../services/audit");
 const svc = require("./visitas.service");
+const { getFullClinicalHistory } = require("../analisis/analisis.service");
 
 const router = express.Router();
 router.use(requireAuth);
+
+router.get("/historial/:idPaciente", async (req, res) => {
+  try {
+    const id = parseEntityId(req.params.idPaciente);
+    if (!id) return sendInvalidId(res, "paciente");
+    const history = await getFullClinicalHistory(id);
+    res.json(history);
+  } catch (error) {
+    handleDatabaseError(error, res, "Error al obtener el historial clínico completo.");
+  }
+});
 
 router.get("/", async (req, res) => {
   try { res.json(await svc.getAll(req.query)); }

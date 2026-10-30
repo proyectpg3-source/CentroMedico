@@ -28,6 +28,7 @@ export interface PriorityQueueRecord {
   hora_inicio_atencion: string | null;
   hora_fin_atencion: string | null;
   minutos_espera: number;
+  vencida?: boolean;
   paciente_nombre: string | null;
   paciente_dni: string | null;
   paciente_telefono: string | null;

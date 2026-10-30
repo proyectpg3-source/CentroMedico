@@ -65,3 +65,11 @@ export function saveTriage(payload: TriagePayload) {
     "No se pudo guardar el triaje."
   );
 }
+
+export function validateTriage({ id_cita, prioridad_final, justificacion }: { id_cita: number; prioridad_final: string; justificacion: string | null }) {
+  return request<unknown>(
+    "/api/triajes/validar",
+    { method: "PATCH", body: JSON.stringify({ id_cita, prioridad_final, justificacion }) },
+    "Error al validar la prioridad."
+  );
+}

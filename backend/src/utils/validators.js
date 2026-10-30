@@ -39,6 +39,67 @@ function roundMoney(value) {
   return Number(Number(value || 0).toFixed(2));
 }
 
+/**
+ * Valida un objeto de entrada contra un mapa de reglas SATS.
+ * @param {Object} data - Datos recibidos en el request.
+ * @param {Object} rules - Mapa de reglas { campo: { required: bool, type: 'id'|'money'|'date'|'string' } }
+ * @returns {Object} { valid: bool, sanitizedData: Object, errors: Array }
+ */
+function validateSATS(data, rules) {
+  const sanitizedData = {};
+  const errors = [];
+
+  if (!data || typeof data !== "object") {
+    return { valid: false, sanitizedData: {}, errors: ["Los datos de entrada no son validos."] };
+  }
+
+  for (const [field, rule] of Object.entries(rules)) {
+    let value = data[field];
+
+    // 1. Manejo de Datos Faltantes (SATS: Missing Data)
+    if (value === undefined || value === null || value === "") {
+      if (rule.required) {
+        errors.push(`El campo ${field} es obligatorio.`);
+        continue;
+      } else {
+        sanitizedData[field] = null; // Normalización a null
+        continue;
+      }
+    }
+
+    // 2. Revisión de Discriminadores (SATS: Discriminators/Types)
+    switch (rule.type) {
+      case 'id':
+        const id = parseEntityId(value);
+        if (id === null) errors.push(`El campo ${field} debe ser un ID valido.`);
+        else sanitizedData[field] = id;
+        break;
+      case 'money':
+        const money = parseMoney(value, { allowNull: !rule.required });
+        if (money === null) errors.push(`El campo ${field} debe ser un valor numerico valido.`);
+        else sanitizedData[field] = money;
+        break;
+      case 'date':
+        if (!isValidDateTime(value)) errors.push(`El campo ${field} debe ser una fecha valida.`);
+        else sanitizedData[field] = new Date(value);
+        break;
+      case 'string':
+        const str = getTrimmedString(value);
+        if (rule.required && !str) errors.push(`El campo ${field} no puede estar vacio.`);
+        sanitizedData[field] = str || null;
+        break;
+      default:
+        sanitizedData[field] = value;
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    sanitizedData,
+    errors
+  };
+}
+
 // ─── Respuestas de error comunes ──────────────────────────────────────────────
 
 function sendInvalidId(res, entityName) {
@@ -62,7 +123,7 @@ function handleDatabaseError(error, res, fallbackMessage) {
   console.error(error);
 
   const CONSTRAINT_MESSAGES = {
-    pacientes_dni_key: "Ya existe un paciente con ese DNI.",
+    pacientes_dni_key: "Ya existe un paciente con ese DPI.",
     medicos_licencia_key: "Ya existe un medico con esa licencia.",
     visitas_medicas_id_cita_key: "La cita ya tiene una visita medica asociada.",
     citas_medico_fecha_activa_key: "El medico ya tiene una cita activa programada en ese mismo horario.",
@@ -141,4 +202,5 @@ module.exports = {
   handleDatabaseError,
   parsePagination,
   buildPaginatedResponse,
+  validateSATS,
 };

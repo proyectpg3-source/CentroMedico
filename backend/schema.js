@@ -132,6 +132,8 @@ const SCHEMA_STATEMENTS = [
       prioridad_clinica TEXT NOT NULL DEFAULT 'baja',
       puntaje_prioridad INTEGER NOT NULL DEFAULT 10,
       motivos_prioridad TEXT,
+      estado_prioridad TEXT NOT NULL DEFAULT 'propuesto' CHECK (estado_prioridad IN ('propuesto', 'validado')),
+      justificacion_cambio TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );

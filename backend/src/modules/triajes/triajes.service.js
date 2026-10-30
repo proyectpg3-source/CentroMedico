@@ -140,9 +140,9 @@ async function upsert(body) {
          antecedentes_relevantes,alergias_referidas,presion_arterial,
          frecuencia_cardiaca,frecuencia_respiratoria,temperatura,
          saturacion_oxigeno,peso,observaciones,prioridad_clinica,
-         puntaje_prioridad,motivos_prioridad,created_at,updated_at
+         puntaje_prioridad,motivos_prioridad,estado_prioridad,created_at,updated_at
        )
-       VALUES ($1,$2,NOW(),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NOW())
+       VALUES ($1,$2,NOW(),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'propuesto',NOW(),NOW())
        ON CONFLICT (id_cita) DO UPDATE SET
          fecha_triaje=NOW(),motivo_consulta=EXCLUDED.motivo_consulta,
          historia_enfermedad_actual=EXCLUDED.historia_enfermedad_actual,
@@ -156,7 +156,8 @@ async function upsert(body) {
          peso=EXCLUDED.peso,observaciones=EXCLUDED.observaciones,
          prioridad_clinica=EXCLUDED.prioridad_clinica,
          puntaje_prioridad=EXCLUDED.puntaje_prioridad,
-         motivos_prioridad=EXCLUDED.motivos_prioridad,updated_at=NOW()`,
+         motivos_prioridad=EXCLUDED.motivos_prioridad,
+         estado_prioridad='propuesto',updated_at=NOW()`,
       [
         triaje.id_cita, appointment.id_paciente, triaje.motivo_consulta,
         triaje.historia_enfermedad_actual, triaje.antecedentes_relevantes,
@@ -195,4 +196,60 @@ async function upsert(body) {
   }
 }
 
-module.exports = { sanitize, validate, getAll, getByAppointment, upsert };
+async function validarPrioridad(idCita, { prioridad_final, justificacion, id_usuario }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Actualizar el triaje con el sello de 'validado'
+    await client.query(
+      `UPDATE triajes SET
+         prioridad_clinica = $1,
+         estado_prioridad = 'validado',
+         justificacion_cambio = $2,
+         updated_at = NOW()
+       WHERE id_cita = $3`,
+      [prioridad_final, justificacion || null, idCita]
+    );
+
+    // 2. Sincronizar la prioridad validada en la cita para la cola médica
+    await client.query(
+      `UPDATE citas SET
+         prioridad_clinica = $1,
+         estado = 'en_curso'
+       WHERE id_cita = $2`,
+      [prioridad_final, idCita]
+    );
+
+    await client.query("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function getStats() {
+  const priorityDist = await pool.query(
+    `SELECT prioridad_clinica, COUNT(*) as total
+     FROM triajes
+     GROUP BY prioridad_clinica`
+  );
+
+  const volumeOverTime = await pool.query(
+    `SELECT DATE(fecha_triaje) as fecha, COUNT(*) as total
+     FROM triajes
+     GROUP BY DATE(fecha_triaje)
+     ORDER BY fecha DESC
+     LIMIT 30`
+  );
+
+  return {
+    distribution: priorityDist.rows,
+    volume: volumeOverTime.rows,
+  };
+}
+
+module.exports = { sanitize, validate, getAll, getByAppointment, upsert, getStats };

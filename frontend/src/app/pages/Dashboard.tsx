@@ -41,6 +41,7 @@ import { fetchPatients, type PatientRecord } from "../api/patients";
 import { fetchAnalysisIndicators, fetchPriorityQueue, type AnalysisIndicators, type ClinicalPriority, type PriorityQueueRecord } from "../api/analysis";
 import { fetchCharges, type ChargeRecord } from "../api/billing";
 import { Skeleton } from "../components/ui/skeleton";
+import { formatDuration } from "../lib/format";
 
 type UiStatus = "pendiente" | "confirmada" | "en_curso" | "completada" | "cancelada";
 
@@ -458,8 +459,10 @@ export default function Dashboard() {
       return { cobrado: null as number | null, pendiente: null as number | null, porOrigen: [] as Array<{ origen: string; total: number }> };
     }
 
-    const cobrado = state.charges.reduce((sum, charge) => sum + Number(charge.total_pagado || 0), 0);
-    const pendiente = state.charges.reduce((sum, charge) => sum + Number(charge.saldo || 0), 0);
+    // Priorizamos los datos del summary del backend si están disponibles,
+    // sino calculamos localmente para mantener la compatibilidad.
+    const recaudado = state.summary?.financiera?.recaudado ?? state.charges.reduce((sum, charge) => sum + Number(charge.total_pagado || 0), 0);
+    const pendiente = state.summary?.financiera?.pendiente ?? state.charges.reduce((sum, charge) => sum + Number(charge.saldo || 0), 0);
 
     const origenLabels: Record<string, string> = {
       consulta: "Consultas",
@@ -475,8 +478,13 @@ export default function Dashboard() {
       .map(([origen, total]) => ({ origen: origenLabels[origen] || origen, total }))
       .sort((left, right) => right.total - left.total);
 
-    return { cobrado, pendiente, porOrigen };
-  }, [state.charges]);
+    return {
+      cobrado: recaudado,
+      pendiente: pendiente,
+      porOrigen,
+      cobrabilidad: state.summary?.financiera?.indiceCobrabilidad ?? (recaudado / NULLIF(recaudado + pendiente, 0) * 100)
+    };
+  }, [state.charges, state.summary]);
 
   const frequentLists = useMemo(() => {
     const diagnosticos = state.indicators?.diagnosticos_frecuentes?.slice(0, 5) ?? [];
@@ -561,15 +569,15 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Franja operativa y financiera: compacta a proposito para no competir
-            con los KPIs clinicos, pero visible sin scroll. */}
-        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-3">
+        {/* Franja operativa y financiera: expandida para incluir análisis de rendimiento
+            sin romper la armonía visual ni el flujo de lectura del administrador. */}
+        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success-bg text-success">
               <Banknote className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Cobrado (histórico)</p>
+              <p className="text-xs text-muted-foreground">Recaudado</p>
               <p className="truncate text-lg font-semibold text-foreground">
                 {financials.cobrado != null ? currencyFormatter.format(financials.cobrado) : "—"}
               </p>
@@ -580,9 +588,42 @@ export default function Dashboard() {
               <Wallet className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Pendiente de cobro</p>
+              <p className="text-xs text-muted-foreground">Pendiente</p>
               <p className="truncate text-lg font-semibold text-foreground">
                 {financials.pendiente != null ? currencyFormatter.format(financials.pendiente) : "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:border-x sm:border-border sm:px-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Tasa Conv.</p>
+              <p className="truncate text-lg font-semibold text-foreground">
+                {state.summary?.operativa?.tasa_conversion != null ? `${state.summary.operativa.tasa_conversion.toFixed(1)}%` : "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:border-x sm:border-border sm:px-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-bg text-accent-foreground">
+              <Clock3 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Espera Prom.</p>
+              <p className="truncate text-lg font-semibold text-foreground">
+                {state.summary?.operativa?.tiempo_espera_promedio_horas != null ? `${state.summary.operativa.tiempo_espera_promedio_horas.toFixed(1)} h` : "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:border-x sm:border-border sm:px-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success-bg text-success">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Cobrabilidad</p>
+              <p className="truncate text-lg font-semibold text-foreground">
+                {state.summary?.financiera?.indiceCobrabilidad != null ? `${state.summary.financiera.indiceCobrabilidad.toFixed(1)}%` : "—"}
               </p>
             </div>
           </div>
@@ -595,7 +636,7 @@ export default function Dashboard() {
               {state.health?.status === "ok" ? <ShieldCheck className="h-5 w-5" /> : <Database className="h-5 w-5" />}
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Estado del sistema</p>
+              <p className="text-xs text-muted-foreground">Estado Sistema</p>
               <p className="truncate text-sm font-medium text-foreground">{operationalText}</p>
             </div>
           </div>
@@ -636,7 +677,11 @@ export default function Dashboard() {
                   </div>
                   <div className="inline-flex items-center gap-2 self-start rounded-xl bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm sm:self-auto">
                     <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
-                    {item.minutos_espera != null ? `${item.minutos_espera} min esperando` : "Sin registro de espera"}
+                    {item.vencida
+                      ? "Cita vencida · cerrar o reprogramar"
+                      : item.minutos_espera != null
+                        ? `${formatDuration(item.minutos_espera)} esperando`
+                        : "Sin registro de espera"}
                   </div>
                 </div>
               ))}

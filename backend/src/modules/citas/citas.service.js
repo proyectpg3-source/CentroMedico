@@ -99,7 +99,7 @@ async function create(body) {
        id_paciente, id_medico, fecha_hora, motivo, estado, triaje_notas,
        prioridad_clinica, puntaje_prioridad, motivos_prioridad, hora_llegada
      )
-     VALUES ($1,$2,$3,$4,COALESCE($5,'pendiente'),$6,$7,$8,$9,NOW())
+     VALUES ($1,$2,$3,$4,COALESCE($5,'pendiente'),$6,$7,$8,$9,NULL)
      RETURNING id_cita`,
     [
       c.id_paciente,
@@ -163,7 +163,10 @@ async function updateStatus(id, estado) {
   const result = await pool.query(
     `UPDATE citas
      SET estado=$2,
-         hora_llegada=COALESCE(hora_llegada, NOW()),
+         hora_llegada=CASE
+           WHEN $2 IN ('en_curso', 'completada') THEN COALESCE(hora_llegada, NOW())
+           ELSE hora_llegada
+         END,
          hora_inicio_atencion=CASE
            WHEN $2 IN ('en_curso', 'completada') AND hora_inicio_atencion IS NULL THEN NOW()
            ELSE hora_inicio_atencion

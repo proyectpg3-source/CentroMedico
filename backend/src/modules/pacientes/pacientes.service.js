@@ -24,9 +24,15 @@ function sanitize(body) {
 
 function validate(paciente, res) {
   if (!paciente.nombre || !paciente.dni) {
-    res.status(400).json({ message: "Nombre y DNI son obligatorios." });
+    res.status(400).json({ message: "Nombre y DPI son obligatorios." });
     return false;
   }
+  const dpi = paciente.dni.replace(/[\s-]/g, "");
+  if (!/^\d{13}$/.test(dpi)) {
+    res.status(400).json({ message: "El DPI debe tener 13 digitos." });
+    return false;
+  }
+  paciente.dni = dpi;
   if (paciente.fecha_nacimiento && !isValidDateTime(paciente.fecha_nacimiento)) {
     res.status(400).json({ message: "La fecha de nacimiento no es valida." });
     return false;

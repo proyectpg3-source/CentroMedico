@@ -175,7 +175,7 @@ function PatientModal({ patient, onClose }: { patient: PatientRecord; onClose: (
               <h3 className="text-gray-900">{patient.nombre}</h3>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">
-                  DNI: {patient.dni}
+                  DPI: {patient.dni}
                 </span>
                 <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700">
                   Registro activo
@@ -288,7 +288,7 @@ function PatientFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-700">DNI *</label>
+              <label className="text-sm text-gray-700">DPI *</label>
               <input
                 required
                 value={form.dni}
@@ -642,7 +642,7 @@ export default function Patients() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por nombre, DNI, email o telefono..."
+              placeholder="Buscar por nombre, DPI, email o teléfono..."
               className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -677,7 +677,7 @@ export default function Patients() {
                         Paciente
                       </th>
                       <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                        DNI
+                        DPI
                       </th>
                       <th className="text-left px-5 py-3 text-xs text-gray-500 uppercase tracking-wide">
                         Contacto

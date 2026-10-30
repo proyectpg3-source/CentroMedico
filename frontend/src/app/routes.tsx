@@ -14,6 +14,8 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Prioritization from "./pages/Prioritization";
 import Triage from "./pages/Triage";
+import WaitingQueue from "./pages/WaitingQueue";
+import Consultation from "./pages/Consultation";
 import Login from "./pages/Login";
 import Forbidden from "./pages/Forbidden";
 import Account from "./pages/Account";
@@ -58,7 +60,9 @@ export const router = createBrowserRouter([
           { element: <RequireRole allowed={MODULE_ACCESS["/appointments"]} />, children: [{ path: "appointments", Component: Appointments }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/recepcion"]} />, children: [{ path: "recepcion", Component: Recepcion }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/triage"]} />, children: [{ path: "triage", Component: Triage }] },
+          { element: <RequireRole allowed={MODULE_ACCESS["/triage"]} />, children: [{ path: "cola-espera", Component: WaitingQueue }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/doctors"]} />, children: [{ path: "doctors", Component: Doctors }] },
+          { element: <RequireRole allowed={MODULE_ACCESS["/records"]} />, children: [{ path: "consulta/:appointmentId", Component: Consultation }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/laboratory"]} />, children: [{ path: "laboratory", Component: Laboratory }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/inventory"]} />, children: [{ path: "inventory", Component: Inventory }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/inventario-general"]} />, children: [{ path: "inventario-general", Component: Inventario }] },
