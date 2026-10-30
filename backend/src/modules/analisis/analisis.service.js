@@ -1,5 +1,6 @@
 const pool = require("../../config/db");
 const { assessTriagePriority } = require("../../services/microservices");
+const { buildEvidence } = require("../triajes/calidadDatos");
 
 const URGENT_KEYWORDS = [
   "dificultad respiratoria",
@@ -188,18 +189,20 @@ async function getPatientBirthDate(idPaciente, queryRunner = pool) {
 
 async function calcularPrioridadDesdeEntrada(input) {
   const localPriority = calculatePriority(input);
+  const evidence = { evidencia_priorizacion: buildEvidence(input) };
 
   try {
     const servicePriority = await assessTriagePriority(input);
-    return servicePriority || {
+    return { ...(servicePriority || {
       ...localPriority,
       fuente_prioridad: "fallback-local",
-    };
+    }), ...evidence };
   } catch (error) {
     return {
       ...localPriority,
       fuente_prioridad: "fallback-local",
       advertencia_microservicio: error.message,
+      ...evidence,
     };
   }
 }
@@ -208,21 +211,23 @@ async function calcularPrioridadParaPaciente(idPaciente, input, queryRunner = po
   const history = await getPatientHistory(idPaciente, queryRunner);
   const fechaNacimiento = await getPatientBirthDate(idPaciente, queryRunner);
   const localPriority = calculatePriority(input, history);
+  const evidence = { evidencia_priorizacion: buildEvidence(input, history.length) };
 
   try {
     const servicePriority = await assessTriagePriority({
       ...input,
       fecha_nacimiento: fechaNacimiento,
     });
-    return servicePriority || {
+    return { ...(servicePriority || {
       ...localPriority,
       fuente_prioridad: "fallback-local",
-    };
+    }), ...evidence };
   } catch (error) {
     return {
       ...localPriority,
       fuente_prioridad: "fallback-local",
       advertencia_microservicio: error.message,
+      ...evidence,
     };
   }
 }
@@ -340,7 +345,7 @@ async function getColaPriorizada() {
        c.fecha_hora ASC`
   );
 
-  return result.rows;
+  return result.rows.map((row) => ({ ...row, evidencia_priorizacion: buildEvidence(row) }));
 }
 
 async function getIndicadores() {

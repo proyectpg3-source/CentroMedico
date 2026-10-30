@@ -2,7 +2,18 @@ import { request } from "./client";
 
 export type ClinicalPriority = "baja" | "media" | "alta" | "critica";
 
+export interface PriorityEvidence {
+  estado_datos: "requiere_revision" | "incompletos" | "registrados";
+  signos_registrados: string[];
+  datos_faltantes: string[];
+  datos_invalidos: string[];
+  visitas_historicas_consultadas: number | null;
+  requiere_validacion_clinica: boolean;
+  alcance: string;
+}
+
 export interface PriorityQueueRecord {
+  evidencia_priorizacion?: PriorityEvidence;
   id_cita: number;
   id_paciente: number;
   id_medico: number;
@@ -41,6 +52,15 @@ export interface AnalysisIndicators {
 }
 
 export interface PrioritySimulationPayload {
+  motivo_consulta?: string | null;
+  historia_enfermedad_actual?: string | null;
+  antecedentes_relevantes?: string | null;
+  alergias_referidas?: string | null;
+  presion_arterial?: string | null;
+  frecuencia_cardiaca?: number | null;
+  frecuencia_respiratoria?: number | null;
+  temperatura?: number | null;
+  saturacion_oxigeno?: number | null;
   id_paciente?: number | null;
   motivo?: string | null;
   triaje_notas?: string | null;
@@ -50,6 +70,9 @@ export interface PrioritySimulationPayload {
 }
 
 export interface PrioritySimulationResult {
+  evidencia_priorizacion?: PriorityEvidence;
+  fuente_prioridad?: string;
+  advertencia_microservicio?: string;
   prioridad_clinica: ClinicalPriority;
   puntaje_prioridad: number;
   motivos_prioridad: string;

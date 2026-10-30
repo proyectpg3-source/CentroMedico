@@ -4,6 +4,22 @@ import { getAuthToken } from "../auth/storage";
 export type ChargeOrigin = "consulta" | "laboratorio" | "farmacia";
 export type ChargeStatus = "pendiente" | "parcial" | "pagado";
 
+export interface DailyPaymentSummary {
+  fecha: string;
+  zona_horaria: string;
+  cantidad: number;
+  total: string;
+  metodos: { metodo: string; cantidad: number; total: string }[];
+}
+
+export function fetchDailyPaymentSummary(fecha: string, signal?: AbortSignal) {
+  return request<DailyPaymentSummary>(
+    `/api/pagos/resumen-diario?${new URLSearchParams({ fecha })}`,
+    { method: "GET", signal },
+    "No se pudo consultar el resumen diario."
+  );
+}
+
 export interface ChargeRecord {
   id_cargo: number;
   id_paciente: number;

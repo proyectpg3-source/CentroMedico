@@ -9,6 +9,7 @@ const {
 const { refreshChargeStatus } = require("../../utils/cargosService");
 const { PAGO_SELECT } = require("../../utils/queries");
 const { logAuditEvent } = require("../../services/audit");
+const { getDailySummary } = require("./resumenDiario");
 
 const ALLOWED_ORIGINS = new Set(["consulta", "laboratorio", "farmacia"]);
 
@@ -39,6 +40,15 @@ async function getPaymentById(id, queryRunner = pool) {
 const router = express.Router();
 router.use(requireAuth);
 router.use(requireRole("admin", "recepcionista", "fundacion"));
+
+router.get("/resumen-diario", async (req, res) => {
+  try {
+    res.json(await getDailySummary(pool, req.query.fecha));
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ message: error.message });
+    handleDatabaseError(error, res, "No se pudo consultar el resumen diario.");
+  }
+});
 
 router.get("/", async (req, res) => {
   try {

@@ -1,7 +1,8 @@
 import { request, unwrapList, type PaginatedResponse } from "./client";
-import type { ClinicalPriority } from "./analysis";
+import type { ClinicalPriority, PriorityEvidence } from "./analysis";
 
 export interface TriageRecord {
+  evidencia_priorizacion?: PriorityEvidence;
   id_triaje: number;
   id_cita: number;
   id_paciente: number;

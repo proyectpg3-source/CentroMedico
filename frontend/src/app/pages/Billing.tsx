@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
+import { DailyPaymentSummary } from "../components/DailyPaymentSummary";
 import { Can } from "../auth/usePermissions";
 import {
   createPayment,
@@ -183,6 +184,7 @@ function PaymentModal({
 }
 
 export default function Billing() {
+  const [summaryRevision, setSummaryRevision] = useState(0);
   const [charges, setCharges] = useState<ChargeRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [search, setSearch] = useState("");
@@ -302,6 +304,7 @@ export default function Billing() {
 
       setSelectedCharge(null);
       setSuccessMessage("El pago se registro correctamente.");
+      setSummaryRevision((value) => value + 1);
       await loadData();
     } catch (paymentError) {
       setSubmitError(getErrorMessage(paymentError, "No se pudo registrar el pago."));
@@ -318,6 +321,7 @@ export default function Billing() {
       />
 
       <div className="flex-1 space-y-6 p-4 lg:p-6">
+        <DailyPaymentSummary revision={summaryRevision} />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Facturado</p>

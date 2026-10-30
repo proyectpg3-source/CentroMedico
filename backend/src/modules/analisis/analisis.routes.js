@@ -8,6 +8,7 @@ const {
   recalcularCitasAbiertas,
 } = require("./analisis.service");
 const { getOptionalId, handleDatabaseError } = require("../../utils/validators");
+const { validateVitals } = require("../triajes/calidadDatos");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -23,6 +24,8 @@ router.get("/priorizacion", async (req, res) => {
 
 router.post("/priorizacion/simular", async (req, res) => {
   try {
+    const vitalError = validateVitals(req.body);
+    if (vitalError) return res.status(400).json({ message: vitalError });
     const idPaciente = getOptionalId(req.body.id_paciente);
     const input = {
       motivo: req.body.motivo,

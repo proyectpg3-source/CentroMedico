@@ -14,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Header } from "../components/layout/Header";
+import { PriorityEvidence } from "../components/PriorityEvidence";
 import { Can } from "../auth/usePermissions";
 import {
   fetchAnalysisIndicators,
@@ -352,6 +353,7 @@ export default function Prioritization() {
                         <h3 className="mt-3 text-lg font-semibold text-slate-900">
                           {appointment.paciente_nombre || "Paciente sin nombre"}
                         </h3>
+                        <PriorityEvidence evidence={appointment.evidencia_priorizacion} />
                         <p className="mt-1 text-sm text-slate-500">
                           {appointment.medico_nombre || "Doctor no asignado"} ·{" "}
                           {appointment.medico_especialidad || "Especialidad no registrada"}
@@ -509,6 +511,7 @@ export default function Prioritization() {
                     {priorityMeta[simulationResult.prioridad_clinica].label} · {simulationResult.puntaje_prioridad} pts
                   </span>
                   <p className="mt-3 text-sm text-slate-600">{simulationResult.motivos_prioridad}</p>
+                  <PriorityEvidence evidence={simulationResult.evidencia_priorizacion} source={simulationResult.fuente_prioridad} fallback={!!simulationResult.advertencia_microservicio} />
                 </div>
               )}
             </form>

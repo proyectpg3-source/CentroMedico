@@ -17,7 +17,8 @@ import { Header } from "../components/layout/Header";
 import { Can } from "../auth/usePermissions";
 import { fetchAppointments, type AppointmentRecord } from "../api/appointments";
 import { fetchTriages, saveTriage, type TriageRecord } from "../api/triage";
-import type { ClinicalPriority } from "../api/analysis";
+import { simulatePriority, type ClinicalPriority, type PrioritySimulationResult } from "../api/analysis";
+import { PriorityEvidence } from "../components/PriorityEvidence";
 import { formatDateTime, getErrorMessage } from "../lib/format";
 
 interface TriageFormState {
@@ -59,8 +60,10 @@ function buildForm(appointment: AppointmentRecord, triage?: TriageRecord): Triag
 
 function optionalNumber(value: string) {
   if (!value.trim()) return null;
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim())) throw new Error("Revisa los signos vitales: usa valores numéricos sin unidades.");
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  if (!Number.isFinite(parsed)) throw new Error("Revisa los signos vitales: usa valores numéricos sin unidades.");
+  return parsed;
 }
 
 function TriageModal({
@@ -75,6 +78,29 @@ function TriageModal({
   onSaved: (record: TriageRecord) => void;
 }) {
   const [form, setForm] = useState(() => buildForm(appointment, triage));
+  const [preview, setPreview] = useState<PrioritySimulationResult | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  useEffect(() => { setPreview(null); }, [form]);
+
+  async function handlePreview() {
+    setPreviewing(true); setError(null); setPreview(null);
+    try {
+      setPreview(await simulatePriority({
+        id_paciente: appointment.id_paciente,
+        motivo_consulta: form.motivo_consulta,
+        historia_enfermedad_actual: form.historia_enfermedad_actual,
+        antecedentes_relevantes: form.antecedentes_relevantes,
+        alergias_referidas: form.alergias_referidas,
+        presion_arterial: form.presion_arterial.trim() || null,
+        frecuencia_cardiaca: optionalNumber(form.frecuencia_cardiaca),
+        frecuencia_respiratoria: optionalNumber(form.frecuencia_respiratoria),
+        temperatura: optionalNumber(form.temperatura),
+        saturacion_oxigeno: optionalNumber(form.saturacion_oxigeno),
+        observaciones: form.observaciones,
+      }));
+    } catch (reason) { setError(getErrorMessage(reason, "No se pudo revisar la prioridad.")); }
+    finally { setPreviewing(false); }
+  }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +148,7 @@ function TriageModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 p-6">
+          <fieldset disabled={saving || previewing} className="min-w-0 space-y-6">
           {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
           <section>
@@ -158,8 +185,9 @@ function TriageModal({
                 ["peso", "Peso kg", "65"],
               ].map(([field, label, placeholder]) => (
                 <div key={field}>
-                  <label className="text-xs font-medium text-slate-600">{label}</label>
+                  <label htmlFor={`triage-${field}`} className="text-xs font-medium text-slate-600">{label}</label>
                   <input
+                    id={`triage-${field}`}
                     inputMode={field === "presion_arterial" ? "text" : "decimal"}
                     value={form[field as keyof TriageFormState]}
                     onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
@@ -176,6 +204,17 @@ function TriageModal({
             <textarea rows={3} value={form.observaciones} onChange={(event) => setForm((current) => ({ ...current, observaciones: event.target.value }))} className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" />
           </div>
 
+          <section aria-live="polite" className="rounded-xl border border-slate-200 p-4">
+            <button type="button" onClick={handlePreview} className="rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-medium text-blue-700 disabled:opacity-60">
+              {previewing ? "Revisando…" : "Revisar prioridad antes de guardar"}
+            </button>
+            <p className="mt-2 text-xs text-slate-500">La vista previa no guarda datos ni cambia la cola.</p>
+            {preview && <>
+              <p className="mt-3 text-sm font-medium">Prioridad sugerida: {priorityMeta[preview.prioridad_clinica].label} · {preview.puntaje_prioridad} puntos</p>
+              <p className="mt-2 text-sm text-slate-600">{preview.motivos_prioridad}</p>
+              <PriorityEvidence evidence={preview.evidencia_priorizacion} source={preview.fuente_prioridad} fallback={!!preview.advertencia_microservicio} />
+            </>}
+          </section>
           <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500">La prioridad calculada debe ser confirmada por personal clinico.</p>
             <div className="flex justify-end gap-3">
@@ -186,6 +225,7 @@ function TriageModal({
               </button>
             </div>
           </div>
+          </fieldset>
         </form>
       </div>
     </div>
@@ -278,14 +318,15 @@ export default function Triage() {
                 <article key={appointment.id_cita} className={`rounded-2xl border border-l-4 border-slate-200 bg-white p-5 shadow-sm ${priority.border}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${priority.badge}`}>{priority.label} · {appointment.puntaje_prioridad || 10} pts</span>{triage && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Evaluado</span>}</div>
+                      <div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${priority.badge}`}>{priority.label} · {appointment.puntaje_prioridad || 10} pts</span>{triage && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Triaje registrado</span>}</div>
                       <h2 className="mt-3 text-lg font-semibold text-slate-900">{appointment.paciente_nombre || "Paciente"}</h2>
                       <p className="mt-1 text-sm text-slate-500">{appointment.medico_nombre || "Doctor no asignado"} · {formatDateTime(appointment.fecha_hora)}</p>
                     </div>
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Stethoscope className="h-5 w-5" /></div>
                   </div>
                   <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">{triage?.motivo_consulta || appointment.motivo || "Sin motivo registrado"}</p>
-                  {triage && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">P/A {triage.presion_arterial || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">FC {triage.frecuencia_cardiaca || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">T {triage.temperatura || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">SpO2 {triage.saturacion_oxigeno || "-"}%</span></div>}
+                  {triage && <PriorityEvidence evidence={triage.evidencia_priorizacion} />}
+                  {triage && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">P/A {triage.presion_arterial || "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">FC {triage.frecuencia_cardiaca ?? "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">T {triage.temperatura ?? "-"}</span><span className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">SpO2 {triage.saturacion_oxigeno ?? "-"}%</span></div>}
                   <Can module="triage" action="edit">
                     <button type="button" onClick={() => setSelected(appointment)} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"><HeartPulse className="h-4 w-4" />{triage ? "Actualizar triaje" : "Registrar triaje"}</button>
                   </Can>

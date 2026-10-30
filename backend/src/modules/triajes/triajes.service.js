@@ -7,17 +7,16 @@ const {
   buildPaginatedResponse,
 } = require("../../utils/validators");
 const { calcularPrioridadParaPaciente } = require("../analisis/analisis.service");
+const { parseNumber, validateVitals, buildEvidence } = require("./calidadDatos");
 
 function optionalInteger(value) {
   if (value === undefined || value === null || value === "") return null;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isInteger(parsed) ? parsed : null;
+  return parseNumber(value, true);
 }
 
 function optionalDecimal(value) {
   if (value === undefined || value === null || value === "") return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return parseNumber(value);
 }
 
 function sanitize(body) {
@@ -38,6 +37,11 @@ function sanitize(body) {
 }
 
 function validate(triaje, res) {
+  const vitalError = validateVitals(triaje);
+  if (vitalError) {
+    res.status(400).json({ message: vitalError });
+    return false;
+  }
   if (!triaje.id_cita || !triaje.motivo_consulta) {
     res.status(400).json({ message: "La cita y el motivo de consulta son obligatorios." });
     return false;
@@ -95,16 +99,19 @@ async function getAll(query) {
     ),
   ]);
 
-  return buildPaginatedResponse(dataResult.rows, countResult.rows[0].total, page, limit);
+  return buildPaginatedResponse(dataResult.rows.map((row) => ({ ...row, evidencia_priorizacion: buildEvidence(row) })), countResult.rows[0].total, page, limit);
 }
 
 async function getByAppointment(idCita, queryRunner = pool) {
   const result = await queryRunner.query(`${TRIAGE_SELECT} WHERE t.id_cita = $1`, [idCita]);
-  return result.rows[0] || null;
+  return result.rows[0] ? { ...result.rows[0], evidencia_priorizacion: buildEvidence(result.rows[0]) } : null;
 }
 
 async function upsert(body) {
+  const vitalError = validateVitals(body);
+  if (vitalError) throw Object.assign(new Error(vitalError), { status: 400 });
   const triaje = sanitize(body);
+  validate(triaje, { status(status) { return { json(result) { throw Object.assign(new Error(result.message), { status }); } }; } });
   const client = await pool.connect();
 
   try {

@@ -2,6 +2,7 @@ const express = require("express");
 const { requireAuth, requireRole } = require("../../middlewares/auth.middleware");
 const { parseEntityId, sendInvalidId, handleDatabaseError } = require("../../utils/validators");
 const service = require("./triajes.service");
+const { validateVitals } = require("./calidadDatos");
 
 const router = express.Router();
 router.use(requireAuth);
@@ -29,6 +30,8 @@ router.get("/cita/:id", async (req, res) => {
 
 router.post("/", requireRole("admin", "enfermero"), async (req, res) => {
   try {
+    const vitalError = validateVitals(req.body);
+    if (vitalError) return res.status(400).json({ message: vitalError });
     const data = service.sanitize(req.body);
     if (!service.validate(data, res)) return;
     res.status(201).json(await service.upsert(req.body));
