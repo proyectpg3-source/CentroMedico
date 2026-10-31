@@ -12,6 +12,7 @@ import Prescriptions from "./pages/Prescriptions";
 import Billing from "./pages/Billing";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Notifications from "./pages/Notifications";
 import Prioritization from "./pages/Prioritization";
 import Triage from "./pages/Triage";
 import WaitingQueue from "./pages/WaitingQueue";
@@ -75,6 +76,7 @@ export const router = createBrowserRouter([
           { element: <RequireRole allowed={MODULE_ACCESS["/reports"]} />, children: [{ path: "reports", Component: Reports }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/prioritization"]} />, children: [{ path: "prioritization", Component: Prioritization }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/settings"]} />, children: [{ path: "settings", Component: Settings }] },
+          { element: <RequireRole allowed={MODULE_ACCESS["/notificaciones"]} />, children: [{ path: "notificaciones", Component: Notifications }] },
           { path: "*", Component: NotFound },
         ],
       },

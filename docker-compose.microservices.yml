@@ -36,6 +36,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Genera JWT_SECRET con npm run secret:generate}
       JWT_EXPIRES_IN: 8h
       INVENTORY_EXPIRING_SOON_DAYS: 180
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      APP_URL: ${APP_URL:-}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-}
     ports:
       - "5000:5000"
 

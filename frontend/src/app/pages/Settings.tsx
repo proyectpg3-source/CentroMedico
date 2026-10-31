@@ -206,7 +206,7 @@ function GeneralSettings() {
 }
 
 function NotificationsSettings() {
-  return <div className="space-y-4"><h3 className="text-gray-900">Notificaciones</h3><p className="text-sm text-gray-500">El envío de recordatorios por correo y SMS todavía no está integrado. No se activan envíos desde esta pantalla.</p><p className="text-sm text-gray-500">Los avisos de las operaciones aparecen en cada módulo. Podés revisar las alertas de existencias y vencimiento en Laboratorio e Inventario.</p></div>;
+  return <div className="space-y-4"><h3 className="text-gray-900">Notificaciones</h3><p className="text-sm text-gray-500">Los avisos administrativos por correo se preparan, confirman y consultan en Correos. El administrador configura Resend y el remitente verificado en las variables del backend; las claves no se introducen aquí.</p><a href="/notificaciones" className="inline-flex min-h-11 items-center text-sm text-emerald-800 underline">Abrir Correos</a><p className="text-sm text-gray-500">No se envían recordatorios automáticos ni SMS. Las alertas de existencias y vencimiento se consultan en Laboratorio e Inventario.</p></div>;
 }
 
 const USER_ROLES: UserRole[] = ["admin", "medico", "enfermero", "fundacion", "recepcionista"];

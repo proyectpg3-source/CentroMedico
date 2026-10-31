@@ -48,7 +48,17 @@ Los directorios `microservices/` y su guía de video se conservan como material 
 de la actividad anterior; no forman parte de la ejecución actual. Para Docker Compose
 se utiliza `docker-compose.yml`, que inicia frontend, backend y PostgreSQL.
 
-## Verificacion
+## Correos administrativos
+
+Se implementó el módulo **Correos** con Resend: bienvenidas de personal/pacientes,
+avisos de citas y acceso temporal al estado de cuenta. Los envíos se solicitan
+después de guardar el registro y confirmar el destinatario; los fallos no duplican
+ni eliminan personas. Requiere configurar el proveedor en el backend.
+Consulta [activación, permisos y reintentos](docs/correo-resend.md).
+
+Pruebas sin envíos reales: `npm run test:email` desde `backend`.
+
+## Verificacion del sistema
 
 ```bash
 cd backend

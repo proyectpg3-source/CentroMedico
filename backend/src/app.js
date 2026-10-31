@@ -85,6 +85,7 @@ app.get("/", (req, res) => {
       "/api/triajes",
       "/api/backups/export",
       "/api/auditoria",
+      "/api/notificaciones",
     ],
   });
 });
@@ -117,6 +118,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/productos", require("./modules/productos/productos.routes"));
 app.use("/api/documentos", require("./modules/documentos/documentos.routes"));
 app.use("/api/configuracion", require("./modules/configuracion/configuracion.routes"));
+app.use("/api/notificaciones", require("./modules/notificaciones/notificaciones.routes"));
 // 404
 app.use((req, res) => {
   res.status(404).json({ message: "Ruta no encontrada." });

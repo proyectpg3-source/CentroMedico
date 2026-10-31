@@ -482,6 +482,24 @@ const SCHEMA_STATEMENTS = [
   );`,
 ];
 
+SCHEMA_STATEMENTS.push(`CREATE TABLE IF NOT EXISTS notificaciones_correo (
+  id UUID PRIMARY KEY,
+  evento_clave TEXT NOT NULL UNIQUE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('paciente_bienvenida','usuario_bienvenida','cita_confirmacion','cita_reprogramacion','estado_cuenta')),
+  entidad_id INTEGER NOT NULL,
+  destinatario VARCHAR(254) NOT NULL,
+  mensaje JSONB NOT NULL,
+  id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+  estado TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente','enviando','aceptado','fallido','desconocido')),
+  proveedor_id TEXT,
+  error_codigo TEXT,
+  primer_intento TIMESTAMPTZ,
+  ultimo_intento TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);`);
+SCHEMA_STATEMENTS.push(`CREATE INDEX IF NOT EXISTS idx_notificaciones_correo_usuario ON notificaciones_correo(id_usuario,created_at DESC);`);
+
 async function ensureSchema(pool) {
   const client = await pool.connect();
 

@@ -43,6 +43,7 @@ export const MODULE_ACCESS: Record<string, UserRole[]> = {
   "/prediccion-ia": ["admin", "medico", "fundacion"],
   "/reports": ["admin", "medico", "fundacion"],
   "/settings": ["admin"],
+  "/notificaciones": ["admin", "recepcionista", "enfermero"],
 };
 
 export function canAccess(role: UserRole | undefined, path: string) {

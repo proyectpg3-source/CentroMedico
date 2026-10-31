@@ -14,6 +14,7 @@ import {
   HeartPulse,
   LayoutDashboard,
   LogOut,
+  Mail,
   Package,
   PanelLeftClose,
   Pill,
@@ -83,6 +84,7 @@ export const navigation: NavGroup[] = [
     items: [
       { to: "/reports", icon: BarChart3, label: "Reportes" },
       { to: "/settings", icon: Settings, label: "Configuración" },
+      { to: "/notificaciones", icon: Mail, label: "Correos" },
     ],
   },
 ];
