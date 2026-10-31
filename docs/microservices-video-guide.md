@@ -1,3 +1,5 @@
+> Documento histórico de la actividad anterior. Los microservicios descritos aquí ya no son consumidos por la aplicación. Consulte README.md para la arquitectura vigente.
+
 # Guia para el video de microservicios
 
 Proyecto usado para la entrega:

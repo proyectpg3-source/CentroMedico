@@ -73,7 +73,6 @@ export interface PrioritySimulationPayload {
 export interface PrioritySimulationResult {
   evidencia_priorizacion?: PriorityEvidence;
   fuente_prioridad?: string;
-  advertencia_microservicio?: string;
   prioridad_clinica: ClinicalPriority;
   puntaje_prioridad: number;
   motivos_prioridad: string;

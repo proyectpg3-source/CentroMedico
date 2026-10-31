@@ -18,7 +18,7 @@ check(buildEvidence(valid).estado_datos === 'registrados', 'Datos registrados');
 check(buildEvidence(valid).requiere_validacion_clinica, 'Registrar signos no confirma clinicamente');
 check(buildEvidence({ frecuencia_cardiaca: '80lpm' }).datos_invalidos.includes('Frecuencia cardíaca'), 'Registro antiguo invalido se senala sin modificar');
 
-let role = 'admin', active = true, mode = 'disabled', writes = 0, externalCalls = 0;
+let role = 'admin', active = true, writes = 0;
 const queue = [{ id_cita: 1, puntaje_prioridad: 10, prioridad_clinica: 'baja', ...valid }, { id_cita: 2, puntaje_prioridad: 50, prioridad_clinica: 'alta' }];
 const pool = { async query(sql) {
   if (sql.includes('FROM usuarios')) return { rows: [{ id_usuario: 1, rol: role, activo: active }] };
@@ -27,11 +27,8 @@ const pool = { async query(sql) {
   if (sql.includes('FROM citas c')) return { rows: queue };
   throw new Error('Consulta inesperada: ' + sql);
 }, async connect() { writes++; throw new Error('No se permite guardar en esta prueba'); } };
-const externalResult = { prioridad_clinica: 'alta', puntaje_prioridad: 60, motivos_prioridad: 'Resultado sintetico', fuente_prioridad: 'servicio-sintetico' };
-for (const [file, exports] of [
-  ['../src/config/db', pool],
-  ['../src/services/microservices', { async assessTriagePriority() { externalCalls++; if (mode === 'error') throw new Error('SYNTHETIC_UNAVAILABLE'); return mode === 'external' ? externalResult : null; } }],
-]) { const id = require.resolve(file); require.cache[id] = { id, filename: id, loaded: true, exports }; }
+const dbId = require.resolve('../src/config/db');
+require.cache[dbId] = { id: dbId, filename: dbId, loaded: true, exports: pool };
 const service = require('../src/modules/analisis/analisis.service');
 const triage = require('../src/modules/triajes/triajes.service');
 process.env.JWT_SECRET = require('node:crypto').randomBytes(48).toString('hex');
@@ -39,17 +36,11 @@ const app = require('express')(); app.use(require('express').json());
 app.use('/api/analisis', require('../src/modules/analisis/analisis.routes'));
 app.use('/api/triajes', require('../src/modules/triajes/triajes.routes'));
 (async () => {
-  for (mode of ['disabled', 'error']) {
-    const input = { motivo_consulta: 'Control sintético', ...valid };
-    const result = await service.calcularPrioridadDesdeEntrada(input);
-    const baseline = service.calculatePriority(input);
-    for (const key of ['prioridad_clinica', 'puntaje_prioridad', 'motivos_prioridad']) check(result[key] === baseline[key], 'La evidencia no cambia el motor local');
-    check(result.evidencia_priorizacion.signos_registrados.length === 5, 'Evidencia en fallback');
-  }
-  mode = 'external';
-  const result = await service.calcularPrioridadDesdeEntrada(valid);
-  for (const key of Object.keys(externalResult)) check(result[key] === externalResult[key], 'La evidencia no reemplaza el resultado externo');
-  check(!externalResult.evidencia_priorizacion, 'No mutar resultado externo');
+  const input = { motivo_consulta: 'Control sintético', ...valid };
+  const result = await service.calcularPrioridadDesdeEntrada(input);
+  check(result.prioridad_clinica === 'baja' && result.puntaje_prioridad === 0, 'Control con signos normales usa motor local');
+  check(result.fuente_prioridad === 'local', 'Origen local explícito');
+  check(result.evidencia_priorizacion.signos_registrados.length === 5, 'Conserva evidencia');
   const patientResult = await service.calcularPrioridadParaPaciente(1, valid);
   check(patientResult.evidencia_priorizacion.visitas_historicas_consultadas === 0, 'Historial vacio explicito');
   const items = await service.getColaPriorizada();
@@ -70,15 +61,13 @@ app.use('/api/triajes', require('../src/modules/triajes/triajes.routes'));
     }
     for (role of ['recepcionista', 'fundacion']) check((await request('/api/analisis/priorizacion/simular', valid)).status === 403, 'Acceso financiero no permite simulacion');
     role = 'enfermero';
-    const previous = externalCalls;
     check((await request('/api/analisis/priorizacion/simular', { temperatura: '36C' })).status === 400, 'Simulacion rechaza signos invalidos');
-    check(externalCalls === previous, 'Entrada invalida no llama al motor');
     check((await request('/api/triajes', { id_cita: 1, motivo_consulta: 'Prueba', frecuencia_cardiaca: '80lpm' })).status === 400, 'Triaje HTTP no trunca datos');
     role = 'medico';
     check((await request('/api/triajes', { id_cita: 1, motivo_consulta: 'Prueba', ...valid })).status === 403, 'Conservar permiso de escritura de enfermeria');
     active = false;
     check((await request('/api/analisis/priorizacion/simular', valid)).status === 401, 'Cuenta desactivada no simula');
     check(writes === 0, 'Vista previa y rechazos sin escrituras');
-    console.log(`${passed} comprobaciones aprobadas: calidad de datos, compatibilidad local/externa, cola, roles y vista previa sin escrituras.`);
+    console.log(`${passed} comprobaciones aprobadas: calidad de datos, motor local, cola, roles y vista previa sin escrituras.`);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 })().catch((error) => { console.error(error); process.exitCode = 1; });

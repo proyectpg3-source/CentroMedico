@@ -81,7 +81,6 @@ export interface LabSupplyAlert {
 export interface LabSupplyAlertsResponse {
   source: string;
   generatedAt: string;
-  serviceWarning?: string;
   summary: {
     totalItems: number;
     totalAlerts: number;

@@ -5,7 +5,7 @@ const {
 } = require("../../utils/validators");
 const { LAB_ORDER_SELECT, RESULTADO_SELECT } = require("../../utils/queries");
 const { upsertChargeForRecord } = require("../../utils/cargosService");
-const { buildInventoryAlerts } = require("../../services/microservices");
+const { buildInventoryAlerts } = require("../../services/inventoryAlerts");
 
 const ALLOWED_STATES = new Set(["pendiente", "en_proceso", "resultado_cargado", "validado"]);
 const ALLOWED_PRIORITIES = new Set(["normal", "alta", "urgente"]);

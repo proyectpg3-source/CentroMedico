@@ -511,7 +511,7 @@ export default function Prioritization() {
                     {priorityMeta[simulationResult.prioridad_clinica].label} · {simulationResult.puntaje_prioridad} pts
                   </span>
                   <p className="mt-3 text-sm text-slate-600">{simulationResult.motivos_prioridad}</p>
-                  <PriorityEvidence evidence={simulationResult.evidencia_priorizacion} source={simulationResult.fuente_prioridad} fallback={!!simulationResult.advertencia_microservicio} />
+                  <PriorityEvidence evidence={simulationResult.evidencia_priorizacion} source={simulationResult.fuente_prioridad} />
                 </div>
               )}
             </form>

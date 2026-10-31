@@ -11,7 +11,6 @@ const { ensureSchema } = require("../schema");
 const pool = require("./config/db");
 const errorHandler = require("./middlewares/errorHandler");
 const schemaReadyMiddleware = require("./middlewares/schemaReady");
-const { getMicroserviceHealth } = require("./services/microservices");
 
 // Rutas
 const authRoutes = require("./modules/auth/auth.routes");
@@ -68,7 +67,6 @@ app.get("/", (req, res) => {
     message: "Servidor del Centro Medico activo.",
     endpoints: [
       "/api/health",
-      "/api/microservices/health",
       "/api/dashboard/resumen",
       "/api/pacientes",
       "/api/medicos",
@@ -97,14 +95,6 @@ app.get("/api/health", async (req, res) => {
     res.json({ status: "ok", database: "connected" });
   } catch {
     res.status(500).json({ status: "error", database: "disconnected" });
-  }
-});
-
-app.get("/api/microservices/health", async (req, res, next) => {
-  try {
-    res.json(await getMicroserviceHealth());
-  } catch (error) {
-    next(error);
   }
 });
 

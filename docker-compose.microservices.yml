@@ -1,4 +1,5 @@
-name: centro-medico-microservicios
+# Nombre anterior conservado por compatibilidad; sin servicios auxiliares.
+name: centro-medico
 
 services:
   postgres:
@@ -17,34 +18,12 @@ services:
       timeout: 5s
       retries: 10
 
-  triage-priority-service:
-    build:
-      context: ./microservices/triage-priority-service
-    environment:
-      NODE_ENV: production
-      PORT: 4101
-    ports:
-      - "4101:4101"
-
-  inventory-alerts-service:
-    build:
-      context: ./microservices/inventory-alerts-service
-    environment:
-      NODE_ENV: production
-      PORT: 4102
-    ports:
-      - "4102:4102"
-
   backend:
     build:
       context: ./backend
     depends_on:
       postgres:
         condition: service_healthy
-      triage-priority-service:
-        condition: service_started
-      inventory-alerts-service:
-        condition: service_started
     environment:
       NODE_ENV: production
       PORT: 5000
@@ -56,9 +35,6 @@ services:
       CORS_ORIGIN: http://localhost:5173
       JWT_SECRET: ${JWT_SECRET:?Genera JWT_SECRET con npm run secret:generate}
       JWT_EXPIRES_IN: 8h
-      TRIAGE_SERVICE_URL: http://triage-priority-service:4101
-      INVENTORY_ALERTS_SERVICE_URL: http://inventory-alerts-service:4102
-      MICROSERVICE_TIMEOUT_MS: 1500
       INVENTORY_EXPIRING_SOON_DAYS: 180
     ports:
       - "5000:5000"

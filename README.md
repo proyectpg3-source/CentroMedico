@@ -32,33 +32,21 @@ npm run dev
 
 Aplicacion: `http://localhost:5173`
 
-## Microservicios
+## Arquitectura de ejecución
 
-Se agregaron dos microservicios para la actividad:
+El sistema utiliza frontend React, backend Express organizado por módulos y PostgreSQL.
+El backend calcula la prioridad de triaje y las alertas de inventario internamente,
+sin llamadas a microservicios ni necesidad de desplegar servicios auxiliares.
+La prioridad usa las reglas locales existentes y requiere revisión clínica.
 
-- `microservices/triage-priority-service`: calcula prioridad clinica de triaje.
-- `microservices/inventory-alerts-service`: calcula alertas de stock bajo y vencimiento para insumos de laboratorio.
+`INVENTORY_EXPIRING_SOON_DAYS` configura el plazo de alertas de vencimiento (180 días por defecto).
+Las antiguas variables `TRIAGE_SERVICE_URL`, `INVENTORY_ALERTS_SERVICE_URL` y
+`MICROSERVICE_TIMEOUT_MS` ya no se utilizan; pueden retirarse del entorno de despliegue.
+El endpoint `/api/microservices/health` se retiró; el estado del backend se consulta en `/api/health`.
 
-El backend los consume con estas variables:
-
-```env
-TRIAGE_SERVICE_URL=http://localhost:4101
-INVENTORY_ALERTS_SERVICE_URL=http://localhost:4102
-```
-
-Health desde el backend:
-
-```bash
-http://localhost:5000/api/microservices/health
-```
-
-Despliegue con Docker Compose:
-
-```bash
-docker compose -f docker-compose.microservices.yml up --build
-```
-
-Guia para grabar el video: `docs/microservices-video-guide.md`.
+Los directorios `microservices/` y su guía de video se conservan como material histórico
+de la actividad anterior; no forman parte de la ejecución actual. Para Docker Compose
+se utiliza `docker-compose.yml`, que inicia frontend, backend y PostgreSQL.
 
 ## Verificacion
 

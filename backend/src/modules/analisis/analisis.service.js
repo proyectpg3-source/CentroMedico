@@ -1,5 +1,4 @@
 const pool = require("../../config/db");
-const { assessTriagePriority } = require("../../services/microservices");
 const { buildEvidence } = require("../triajes/calidadDatos");
 
 const URGENT_KEYWORDS = [
@@ -151,57 +150,21 @@ async function getPatientHistory(idPaciente, queryRunner = pool) {
   return result.rows;
 }
 
-async function getPatientBirthDate(idPaciente, queryRunner = pool) {
-  const result = await queryRunner.query(
-    "SELECT fecha_nacimiento FROM pacientes WHERE id_paciente = $1",
-    [idPaciente]
-  );
-  return result.rows[0]?.fecha_nacimiento || null;
-}
-
 async function calcularPrioridadDesdeEntrada(input) {
-  const localPriority = calculatePriority(input);
-  const evidence = { evidencia_priorizacion: buildEvidence(input) };
-
-  try {
-    const servicePriority = await assessTriagePriority(input);
-    return { ...(servicePriority || {
-      ...localPriority,
-      fuente_prioridad: "fallback-local",
-    }), ...evidence };
-  } catch (error) {
-    return {
-      ...localPriority,
-      fuente_prioridad: "fallback-local",
-      advertencia_microservicio: error.message,
-      ...evidence,
-    };
-  }
+  return {
+    ...calculatePriority(input),
+    fuente_prioridad: "local",
+    evidencia_priorizacion: buildEvidence(input),
+  };
 }
 
 async function calcularPrioridadParaPaciente(idPaciente, input, queryRunner = pool) {
   const history = await getPatientHistory(idPaciente, queryRunner);
-  const fechaNacimiento = await getPatientBirthDate(idPaciente, queryRunner);
-  const localPriority = calculatePriority(input, history);
-  const evidence = { evidencia_priorizacion: buildEvidence(input, history.length) };
-
-  try {
-    const servicePriority = await assessTriagePriority({
-      ...input,
-      fecha_nacimiento: fechaNacimiento,
-    });
-    return { ...(servicePriority || {
-      ...localPriority,
-      fuente_prioridad: "fallback-local",
-    }), ...evidence };
-  } catch (error) {
-    return {
-      ...localPriority,
-      fuente_prioridad: "fallback-local",
-      advertencia_microservicio: error.message,
-      ...evidence,
-    };
-  }
+  return {
+    ...calculatePriority(input, history),
+    fuente_prioridad: "local",
+    evidencia_priorizacion: buildEvidence(input, history.length),
+  };
 }
 
 async function aplicarPrioridadACita(idCita, queryRunner = pool) {

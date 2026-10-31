@@ -1251,11 +1251,6 @@ export default function Laboratory() {
             </div>
           </div>
 
-          {supplyAlerts.serviceWarning && (
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              El backend uso calculo local porque el microservicio respondio con aviso: {supplyAlerts.serviceWarning}
-            </div>
-          )}
 
           <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">

@@ -10,6 +10,7 @@
     "db:seed": "node scripts/seed.js",
     "auth:create-admin": "node scripts/create-admin.js",
     "test": "node scripts/test-isolated.js",
+    "test:local-services": "node scripts/test-local-services.js",
     "test:clinical": "node scripts/test-clinical-flow.js",
     "test:security": "node scripts/test-security.js",
     "test:settings": "node scripts/test-settings.js",

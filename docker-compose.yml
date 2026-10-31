@@ -1,0 +1,52 @@
+name: centro-medico
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: Centro_medico
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD para la base de datos}
+    ports:
+      - "5433:5432"
+    volumes:
+      - centro_medico_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d Centro_medico"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_USER: postgres
+      DB_HOST: postgres
+      DB_NAME: Centro_medico
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD para la base de datos}
+      DB_PORT: 5432
+      CORS_ORIGIN: http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:?Genera JWT_SECRET con npm run secret:generate}
+      JWT_EXPIRES_IN: 8h
+      INVENTORY_EXPIRING_SOON_DAYS: 180
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:5000
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  centro_medico_pgdata:

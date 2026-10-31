@@ -212,7 +212,7 @@ function TriageModal({
             {preview && <>
               <p className="mt-3 text-sm font-medium">Prioridad sugerida: {priorityMeta[preview.prioridad_clinica].label} · {preview.puntaje_prioridad} puntos</p>
               <p className="mt-2 text-sm text-slate-600">{preview.motivos_prioridad}</p>
-              <PriorityEvidence evidence={preview.evidencia_priorizacion} source={preview.fuente_prioridad} fallback={!!preview.advertencia_microservicio} />
+              <PriorityEvidence evidence={preview.evidencia_priorizacion} source={preview.fuente_prioridad} />
             </>}
           </section>
           <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
