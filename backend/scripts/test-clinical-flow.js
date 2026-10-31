@@ -80,12 +80,25 @@ async function main() {
     );
     patientId = patient.rows[0].id_paciente;
 
-    const appointment = await pool.query(
-      `INSERT INTO citas (id_paciente,id_medico,fecha_hora,motivo,estado)
-       VALUES ($1,$2,NOW(),$3,'pendiente') RETURNING id_cita`,
-      [patientId, doctor.id_medico, "Fiebre alta y dolor abdominal"]
-    );
-    const appointmentId = appointment.rows[0].id_cita;
+    // Usar el mismo contrato HTTP de Recepción; insertar por SQL ocultaba errores del validador.
+    const appointmentDate = new Date().toISOString();
+    const appointmentResponse = await fetch(`${baseUrl}/api/citas`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ id_paciente: patientId, id_medico: doctor.id_medico,
+        fecha_hora: appointmentDate, motivo: 'Fiebre alta y dolor abdominal',
+        estado: 'pendiente', triaje_notas: 'Ingreso sintético de recepción' }),
+    });
+    const appointment = await appointmentResponse.json();
+    assert.equal(appointmentResponse.status, 201, JSON.stringify(appointment));
+    assert.equal(appointment.fecha_hora, appointmentDate);
+    assert.equal(appointment.estado, 'pendiente');
+    assert.equal(appointment.triaje_notas, 'Ingreso sintético de recepción');
+    assert.ok(appointment.hora_llegada && !Number.isNaN(new Date(appointment.hora_llegada).getTime()), 'El alta conserva el valor predeterminado de hora de llegada');
+    const appointmentId = appointment.id_cita;
+    const agendaResponse = await fetch(`${baseUrl}/api/citas?id_paciente=${patientId}`, { headers });
+    assert.equal(agendaResponse.status, 200);
+    const agenda = await agendaResponse.json();
+    assert.ok(agenda.data.some(item => item.id_cita === appointmentId), 'El ingreso guardado aparece en la agenda');
 
     const triageResponse = await fetch(`${baseUrl}/api/triajes`, {
       method: "POST",

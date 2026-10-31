@@ -7,8 +7,10 @@ const svc = require("./citas.service");
 const SATS_RULES_CITA = {
   id_paciente: { required: true, type: 'id' },
   id_medico: { required: true, type: 'id' },
-  fecha: { required: true, type: 'date' },
+  fecha_hora: { required: true, type: 'date' },
   motivo: { required: false, type: 'string' },
+  estado: { required: false, type: 'string' },
+  triaje_notas: { required: false, type: 'string' },
 };
 
 const router = express.Router();
@@ -33,7 +35,9 @@ router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req,
   try {
     const { valid, sanitizedData, errors } = validateSATS(req.body, SATS_RULES_CITA);
     if (!valid) {
-      return res.status(400).json({ message: "Error de validación SATS", details: errors });
+      const labels = { id_paciente: 'Paciente', id_medico: 'Médico', fecha_hora: 'Fecha y hora', estado: 'Estado', triaje_notas: 'Notas' };
+      const details = errors.map(error => error.replace(/\b(id_paciente|id_medico|fecha_hora|estado|triaje_notas)\b/g, field => labels[field]));
+      return res.status(400).json({ message: details.join(' '), details });
     }
     const created = await svc.create(sanitizedData);
     await logAuditEvent({
@@ -44,7 +48,10 @@ router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req,
       descripcion: `Programo la cita #${created.id_cita}.`,
     });
     res.status(201).json(created);
-  } catch (error) { handleDatabaseError(error, res, "Error al crear la cita."); }
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ message: error.message });
+    handleDatabaseError(error, res, "Error al crear la cita.");
+  }
 });
 
 router.put("/:id", requireRole("admin", "recepcionista", "enfermero"), async (req, res) => {

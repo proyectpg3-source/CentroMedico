@@ -2,13 +2,18 @@
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 process.env.JWT_SECRET = require('node:crypto').randomBytes(48).toString('hex');
-let writes, appointment;
+let writes, appointment, role = 'admin';
 const db = { async query(sql, params = []) {
   const s = sql.replace(/\s+/g, ' ').trim();
-  if (s.startsWith('SELECT id_usuario, nombre, email, rol, id_medico, activo')) return { rows: [{ id_usuario: 1, rol: 'admin', activo: true }] };
+  if (s.startsWith('SELECT id_usuario, nombre, email, rol, id_medico, activo')) return { rows: [{ id_usuario: 1, rol: role, activo: true }] };
   if (s === 'SELECT * FROM citas WHERE id_cita=$1') return { rows: params[0] === 41 ? [appointment] : [] };
   if (s.startsWith('SELECT fecha_nacimiento FROM pacientes')) return { rows: [{ fecha_nacimiento: '1990-01-01' }] };
   if (s.includes('FROM visitas_medicas') && s.includes('ORDER BY')) return { rows: [] };
+  if (s.startsWith('INSERT INTO citas (')) {
+    writes++;
+    appointment = { id_cita: 42, id_paciente: params[0], id_medico: params[1], fecha_hora: params[2], motivo: params[3], estado: params[4] || 'pendiente', triaje_notas: params[5] };
+    return { rows: [{ id_cita: 42 }], rowCount: 1 };
+  }
   if (s.startsWith('UPDATE citas SET id_paciente=')) {
     writes++; appointment = { ...appointment, id_paciente: params[0], id_medico: params[1], fecha_hora: params[2], motivo: params[3], estado: params[4] }; return { rows: [], rowCount: 1 };
   }
@@ -36,6 +41,27 @@ const app = require('../src/app');
     return { status: r.status, data: await r.json() };
   }
   try {
+    const receptionInput = { id_paciente: 51, id_medico: 61, fecha_hora: '2026-10-31T15:30:00.000Z', motivo: 'Consulta sintética', estado: 'pendiente' };
+    for (role of ['admin', 'recepcionista', 'enfermero']) await check('Registrar visita de Recepción con fecha_hora: ' + role, async () => {
+      const r = await req('/api/citas', receptionInput, 'POST');
+      assert.equal(r.status, 201, JSON.stringify(r.data));
+      assert.equal(r.data.fecha_hora, receptionInput.fecha_hora);
+      assert.equal(r.data.estado, 'pendiente'); assert.equal(r.data.motivo, receptionInput.motivo); assert.equal(writes, 1);
+    });
+    role = 'admin';
+    await check('Alta de agenda conserva estado y notas', async () => {
+      const r = await req('/api/citas', { ...receptionInput, estado: 'confirmada', triaje_notas: 'Nota sintética' }, 'POST');
+      assert.equal(r.status, 201, JSON.stringify(r.data)); assert.equal(r.data.estado, 'confirmada'); assert.equal(r.data.triaje_notas, 'Nota sintética');
+    });
+    for (const change of [{ fecha_hora: undefined }, { fecha_hora: 'invalida' }, { id_paciente: null }, { id_medico: '61basura' }, { estado: 'inexistente' }]) {
+      await check('Alta inválida no escribe: ' + JSON.stringify(change), async () => {
+        const r = await req('/api/citas', { ...receptionInput, ...change }, 'POST'); assert.equal(r.status, 400); assert.equal(writes, 0);
+      });
+    }
+    for (role of ['medico', 'fundacion']) await check('Rol sin alta de citas no escribe: ' + role, async () => {
+      const r = await req('/api/citas', receptionInput, 'POST'); assert.equal(r.status, 403); assert.equal(writes, 0);
+    });
+    role = 'admin';
     for (const body of [{ fecha_hora: 'invalida' }, { id_paciente: null }, { id_medico: '61basura' }, { estado: 'inexistente' }]) {
       await check('Cita invalida no escribe: ' + JSON.stringify(body), async () => { const r = await req('/api/citas/41', body); assert.equal(r.status, 400); assert.equal(writes, 0); });
     }

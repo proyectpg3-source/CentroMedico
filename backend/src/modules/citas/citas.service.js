@@ -99,7 +99,7 @@ async function create(body) {
        id_paciente, id_medico, fecha_hora, motivo, estado, triaje_notas,
        prioridad_clinica, puntaje_prioridad, motivos_prioridad, hora_llegada
      )
-     VALUES ($1,$2,$3,$4,COALESCE($5,'pendiente'),$6,$7,$8,$9,NULL)
+     VALUES ($1,$2,$3,$4,COALESCE($5,'pendiente'),$6,$7,$8,$9,DEFAULT)
      RETURNING id_cita`,
     [
       c.id_paciente,
