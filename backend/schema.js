@@ -138,10 +138,10 @@ const SCHEMA_STATEMENTS = [
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `,
-  `
-    CREATE INDEX IF NOT EXISTS idx_triajes_paciente
-    ON triajes(id_paciente, fecha_triaje DESC);
-  `,
+  
+         `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS estado_prioridad TEXT NOT NULL DEFAULT 'propuesto';`,
+     `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS justificacion_cambio TEXT;`,
+  
   `
     CREATE INDEX IF NOT EXISTS idx_triajes_prioridad
     ON triajes(prioridad_clinica, puntaje_prioridad DESC);
