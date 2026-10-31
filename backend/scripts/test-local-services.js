@@ -19,6 +19,16 @@ const { buildInventoryAlerts } = require('../src/services/inventoryAlerts');
   assert.equal(preview.puntaje_prioridad, 0);
   assert.equal(preview.fuente_prioridad, 'local');
   assert.equal(preview.evidencia_priorizacion.signos_registrados.length, 5);
+  for (const missing of [null, '', '  ', undefined]) {
+    const absent = await service.calcularPrioridadDesdeEntrada({
+      temperatura: missing, saturacion_oxigeno: missing,
+      frecuencia_cardiaca: missing, frecuencia_respiratoria: missing,
+      presion_arterial: missing,
+    });
+    assert.equal(absent.puntaje_prioridad, 0, 'Datos ausentes no deben sumar puntos como signos medidos en cero');
+    assert.equal(absent.evidencia_priorizacion.datos_faltantes.length, 5);
+    assert.equal(absent.evidencia_priorizacion.requiere_validacion_clinica, true);
+  }
   const patient = await service.calcularPrioridadParaPaciente(7, { ...normal, motivo_consulta: 'convulsion activa' });
   assert.equal(patient.prioridad_clinica, 'critica');
   assert.equal(patient.fuente_prioridad, 'local');

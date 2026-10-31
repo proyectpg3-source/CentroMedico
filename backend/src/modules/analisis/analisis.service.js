@@ -1,5 +1,5 @@
 const pool = require("../../config/db");
-const { buildEvidence } = require("../triajes/calidadDatos");
+const { buildEvidence, parseNumber } = require("../triajes/calidadDatos");
 
 const URGENT_KEYWORDS = [
   "dificultad respiratoria",
@@ -87,10 +87,11 @@ function calculatePriority(input, history = []) {
   );
 
   // 1. Cálculo de Puntaje Fisiológico (Simulación TEWS)
-  const temperature = Number(input.temperatura);
-  const oxygen = Number(input.saturacion_oxigeno);
-  const heartRate = Number(input.frecuencia_cardiaca);
-  const respiratoryRate = Number(input.frecuencia_respiratoria);
+  // Un signo ausente permanece ausente: Number(null) y Number("") dan cero.
+  const temperature = parseNumber(input.temperatura);
+  const oxygen = parseNumber(input.saturacion_oxigeno);
+  const heartRate = parseNumber(input.frecuencia_cardiaca, true);
+  const respiratoryRate = parseNumber(input.frecuencia_respiratoria, true);
   const systolicPressure = Number.parseInt(String(input.presion_arterial || "").split("/")[0], 10);
 
   if (Number.isFinite(temperature) && (temperature >= 39 || temperature < 35)) tewsScore += 2;
