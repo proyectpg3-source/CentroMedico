@@ -41,6 +41,7 @@ import { fetchPatients, type PatientRecord } from "../api/patients";
 import { fetchAnalysisIndicators, fetchPriorityQueue, type AnalysisIndicators, type ClinicalPriority, type PriorityQueueRecord } from "../api/analysis";
 import { fetchCharges, type ChargeRecord } from "../api/billing";
 import { Skeleton } from "../components/ui/skeleton";
+import { summarizeActivePriorities } from "../lib/appointmentWorkflow.js";
 import { formatDuration } from "../lib/format";
 
 type UiStatus = "pendiente" | "confirmada" | "en_curso" | "completada" | "cancelada";
@@ -398,25 +399,17 @@ export default function Dashboard() {
       return [];
     }
 
-    const active = state.appointments.filter(
-      (appointment) => appointment.estado !== "completada" && appointment.estado !== "cancelada"
-    );
-
-    const counts = active.reduce<Record<ClinicalPriority, number>>(
-      (accumulator, appointment) => ({
-        ...accumulator,
-        [appointment.prioridad_clinica]: (accumulator[appointment.prioridad_clinica] || 0) + 1,
-      }),
-      { baja: 0, media: 0, alta: 0, critica: 0 }
-    );
-
-    return (Object.keys(counts) as ClinicalPriority[])
-      .filter((priority) => counts[priority] > 0)
-      .map((priority) => ({
-        name: priorityMeta[priority].label,
-        value: counts[priority],
-        color: priorityMeta[priority].color,
-      }));
+    const counts = summarizeActivePriorities(state.appointments);
+    const meta = {
+      P1: { label: "P1 validada", color: priorityMeta.critica.color },
+      P2: { label: "P2 validada", color: priorityMeta.alta.color },
+      P3: { label: "P3 validada", color: priorityMeta.media.color },
+      P4: { label: "P4 validada", color: priorityMeta.baja.color },
+      SIN_VALIDAR: { label: "Sin validar", color: "#64748b" },
+    };
+    return (Object.keys(meta) as (keyof typeof meta)[])
+      .filter((key) => counts[key] > 0)
+      .map((key) => ({ name: meta[key].label, value: counts[key], color: meta[key].color }));
   }, [state.appointments]);
 
   const priorityQueueTop = useMemo(() => {
@@ -646,12 +639,12 @@ export default function Dashboard() {
         {/* Cola de prioridad clinica: la vista mas accionable del panel — quien
             hay que atender primero, hace cuanto espera y por que. */}
         <SectionCard
-          title="Cola de prioridad clínica"
-          subtitle="Pacientes activos ordenados por urgencia clínica"
+          title="Seguimiento de atención"
+          subtitle="Evaluaciones pendientes y prioridades validadas"
           action={
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               <ListOrdered className="h-3.5 w-3.5" />
-              {priorityQueueTop.length} en cola
+              {state.priorityQueue?.length ?? 0} citas activas
             </span>
           }
         >
@@ -694,7 +687,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No hay pacientes activos en la cola de prioridad en este momento.
+              No hay citas activas para seguimiento en este momento.
             </p>
           )}
         </SectionCard>
@@ -731,7 +724,7 @@ export default function Dashboard() {
 
           </SectionCard>
 
-          <SectionCard title="Prioridad clínica activa" subtitle="Distribución de citas activas por urgencia">
+          <SectionCard title="Prioridad clínica activa" subtitle="Prioridades validadas y citas pendientes de validación">
             {priorityDistribution.length ? <ResponsiveContainer width="100%" height={190}>
               <PieChart>
                 <Pie data={priorityDistribution} dataKey="value" nameKey="name" innerRadius={48} outerRadius={72} paddingAngle={4}>

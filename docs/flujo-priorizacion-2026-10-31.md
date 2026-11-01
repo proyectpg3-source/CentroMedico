@@ -101,13 +101,36 @@ históricos requieren comprobar la calidad de esas marcas antes de compararlos.
 
 ## Verificación de la integración
 
-- `npm test`: 12 suites aisladas, incluidas 84 comprobaciones del motor y sus entradas.
-- `npm run test:flujo`: 58 comprobaciones con esquema y rutas reales en PGlite.
+- `npm test`: 13 suites aisladas, incluidas 84 comprobaciones del motor y sus entradas.
+- `npm run test:flujo`: 60 comprobaciones con esquema y rutas reales en PGlite.
 - `npm run test:postgres-isolated`: clúster PostgreSQL temporal independiente;
-  incluye el flujo completo (60 comprobaciones), validación y recálculo concurrentes,
+  incluye el flujo completo (62 comprobaciones), validación y recálculo concurrentes,
   consultas compartidas, pagos, atención rápida, resumen diario y correos simulados.
 - `npm run build` en frontend: compilación de producción.
 
 Las pruebas usan datos sintéticos. No envían correos reales ni escriben en la base
 operativa del centro. Las columnas/tablas nuevas se crean al iniciar el backend
 actualizado; no se necesita ejecutar SQL manualmente.
+
+## Comprobación en el despliegue público
+
+Se comprobó con sesión iniciada la carga de Evaluación de Enfermería y su formulario
+SATS (24 discriminadores), Validación profesional, la batería de reglas (20/20),
+Cola médica e Indicadores. La API de Render responde a `/api/health` con base conectada
+y permite CORS desde el dominio de Vercel. Las reglas siguen pendientes de aprobación
+médica; la revisión de software no registra esa decisión.
+
+La revisión detectó que el gráfico del resumen agrupaba citas sin validación como
+«baja» por la columna heredada. Ahora usa `estado_prioridad` y `prioridad_final`,
+muestra «Sin validar» y excluye citas cerradas. El indicador de prioridad alta solo
+cuenta P1/P2 validadas. La sección que incluye casos sin evaluar se llama
+«Seguimiento de atención» para distinguirla de la cola médica validada.
+
+No se registraron ni cambiaron citas, evaluaciones, prioridades, consultas, cargos o
+aprobaciones de producción durante la revisión. Las citas anteriores al cambio
+conservan su estado y requieren revisión del personal si faltan datos de evaluación.
+
+En recepción se corrigió además la visibilidad de Check-in para citas pendientes
+anteriores al cambio, que podían tener hora de llegada por defecto sin haber
+confirmado su ingreso. Se mantiene esa marca histórica; el botón vuelve a permitir
+al personal confirmar la llegada. No se realizó ningún check-in en producción.

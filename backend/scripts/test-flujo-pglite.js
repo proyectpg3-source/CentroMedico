@@ -129,8 +129,11 @@ function check(condition, message) { assert.ok(condition, message); passed++; }
     await call('recepcionista', 'PATCH', `/api/citas/${idCita2}/estado`, { estado: 'confirmada' });
     t = await call('enfermero', 'POST', '/api/triajes', { id_cita: idCita2, motivo_consulta: 'Convulsión', movilidad: 'CAMILLA_INMOVIL', estado_conciencia: 'NO_RESPONDE', trauma: 'NO', revision_discriminadores: { CONVULSION_ACTIVA: 'PRESENTE' } });
     check(t.body.nivel_propuesto === 'P1' && t.body.estado_propuesta === 'PROPUESTA_CONCLUSIVA', 'Convulsión activa: P1 conclusiva');
+    const indicatorService = require('../src/modules/analisis/analisis.service');
+    check((await indicatorService.getIndicadores()).citas_alta_prioridad === 0, 'El resumen no cuenta propuestas como alta prioridad validada');
     v = await call('medico', 'PATCH', '/api/triajes/validar', { id_cita: idCita2, prioridad_final: 'P1' });
     check(v.status === 200 && v.body.prioridad_final === 'P1', 'P1 confirmada sin justificación');
+    check((await indicatorService.getIndicadores()).citas_alta_prioridad === 1, 'El resumen cuenta P1 tras validación profesional');
 
     // Modificar sin justificación se rechaza (tercer paciente, sin propuesta → manual).
     const cita3 = await call('recepcionista', 'POST', '/api/citas', { id_paciente: paciente, id_medico: medico, fecha_hora: new Date(Date.now() + 7200000).toISOString(), motivo: 'Control' });

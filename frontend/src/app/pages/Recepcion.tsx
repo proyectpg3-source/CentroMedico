@@ -8,6 +8,7 @@ import {
   Search,
   User,
 } from "lucide-react";
+import { needsCheckIn } from "../lib/appointmentWorkflow.js";
 import { Header } from "../components/layout/Header";
 import { Can } from "../auth/usePermissions";
 import {
@@ -327,7 +328,7 @@ export default function Recepcion() {
                       <td className="px-4 py-3">
                         <Can module="appointments" action="edit">
                           <div className="flex items-center gap-1.5">
-                            {["pendiente", "confirmada"].includes(a.estado) && !a.hora_llegada && (
+                            {needsCheckIn(a) && (
                               <button
                                 onClick={() => handleStatusChange(a, "confirmada")}
                                 disabled={isUpdating}

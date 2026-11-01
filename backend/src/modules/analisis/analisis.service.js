@@ -305,9 +305,10 @@ async function getIndicadores() {
     ),
     pool.query(
       `SELECT COUNT(*)::int AS total
-       FROM citas
-       WHERE estado IN ('pendiente', 'confirmada', 'en_curso')
-         AND prioridad_clinica IN ('alta', 'critica')`
+       FROM citas c JOIN triajes t ON t.id_cita = c.id_cita
+       WHERE c.estado IN ('pendiente', 'confirmada', 'en_curso')
+         AND t.estado_prioridad = 'validado'
+         AND t.prioridad_final IN ('P1', 'P2')`
     ),
     pool.query(
       `SELECT COALESCE(
