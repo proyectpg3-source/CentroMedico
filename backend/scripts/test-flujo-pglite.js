@@ -34,6 +34,12 @@ function check(condition, message) { assert.ok(condition, message); passed++; }
   await ensureSchema(pool);
   await ensureSchema(pool); // idempotente: se ejecuta en cada arranque
   check(true, 'Esquema aplicado dos veces sin errores');
+  // Simular una instalación anterior en la BD temporal: el arranque restaura
+  // las columnas nuevas incluso si CREATE TABLE IF NOT EXISTS no modifica la tabla.
+  await pool.query('ALTER TABLE triajes DROP COLUMN estado_prioridad CASCADE');
+  await pool.query('ALTER TABLE triajes DROP COLUMN justificacion_cambio');
+  await ensureSchema(pool);
+  check(true, 'Actualización de tabla triajes anterior compatible');
 
   const users = {};
   for (const rol of ['admin', 'medico', 'enfermero', 'recepcionista']) {

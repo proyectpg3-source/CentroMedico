@@ -327,7 +327,7 @@ export default function Recepcion() {
                       <td className="px-4 py-3">
                         <Can module="appointments" action="edit">
                           <div className="flex items-center gap-1.5">
-                            {a.estado === "pendiente" && (
+                            {["pendiente", "confirmada"].includes(a.estado) && !a.hora_llegada && (
                               <button
                                 onClick={() => handleStatusChange(a, "confirmada")}
                                 disabled={isUpdating}
@@ -338,7 +338,7 @@ export default function Recepcion() {
                             )}
                             {/* Tras el check-in el paciente pasa a la evaluación de Enfermería;
                                 el médico lo llama desde la cola médica cuando su prioridad está validada. */}
-                            {a.estado === "confirmada" && (
+                            {a.estado === "confirmada" && a.hora_llegada && (
                               <span className="text-xs text-blue-700">Enviado a evaluación de Enfermería</span>
                             )}
                             {a.estado === "en_curso" && (

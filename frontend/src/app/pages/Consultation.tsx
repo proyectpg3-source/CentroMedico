@@ -46,6 +46,7 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
     tratamiento: "",
     conducta: "",
     examen_fisico: "",
+    costo_consulta: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -54,8 +55,12 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
     async function loadPatientData() {
       try {
         const appointment = await request<any>(`/api/citas/${appointmentId}`);
-        const fullHistory = await request<ClinicalHistory>(`/api/visitas/historial/${appointment.id_paciente}`);
-        setHistory(fullHistory);
+        if (appointment.estado !== "en_curso") throw new Error("Inicia la atención desde la cola médica para abrir esta consulta.");
+        const [fullHistory, currentTriage] = await Promise.all([
+          request<ClinicalHistory>(`/api/visitas/historial/${appointment.id_paciente}`),
+          request<any>(`/api/triajes/cita/${appointmentId}`),
+        ]);
+        setHistory({ ...fullHistory, currentTriage });
       } catch (error) {
         setError(getErrorMessage(error, "No se pudo cargar la consulta."));
       } finally {
@@ -66,6 +71,10 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
   }, [appointmentId]);
 
   async function handleSaveVisit() {
+    if (!visitForm.costo_consulta.trim() || !Number.isFinite(Number(visitForm.costo_consulta)) || Number(visitForm.costo_consulta) < 0) {
+      setError("Indica el costo de consulta; usa 0 cuando la atención sea gratuita.");
+      return;
+    }
     setSaving(true);
     try {
       await request("/api/visitas", {
@@ -73,6 +82,7 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
         body: JSON.stringify({
           id_cita: appointmentId,
           ...visitForm,
+          costo_consulta: Number(visitForm.costo_consulta),
           fecha_visita: new Date().toISOString(),
         })
       });
@@ -226,10 +236,18 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
                   </div>
                 </div>
 
+                <div className="mt-5">
+                  <label htmlFor="consultation-cost" className="text-sm font-medium text-slate-700">Costo de consulta (Q) *</label>
+                  <input id="consultation-cost" type="number" min="0" step="0.01" required
+                    value={visitForm.costo_consulta}
+                    onChange={e => setVisitForm({ ...visitForm, costo_consulta: e.target.value })}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 p-3 text-sm"
+                    placeholder="0 para atención gratuita" />
+                </div>
                 <div className="mt-8 flex justify-end gap-3">
                   <button
                     onClick={handleSaveVisit}
-                    disabled={saving || !visitForm.diagnostico}
+                    disabled={saving || !visitForm.diagnostico.trim() || !visitForm.costo_consulta.trim()}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md"
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

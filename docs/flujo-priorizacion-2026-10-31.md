@@ -80,7 +80,8 @@ con Resend y su configuración vigente; no se incorporó el código Gmail del pa
 - `PATCH /api/citas/:id/estado` permite gestionar llegada/cancelación de citas abiertas.
   Iniciar atención exige `POST /api/triajes/cola/:id/iniciar` y prioridad validada.
   La finalización se produce al guardar la visita en `POST /api/visitas`.
-- La consulta obtiene paciente y médico de la cita; no imprime recetas con nombres,
+- La consulta muestra el triaje de esa cita y exige un costo explícito (0 para
+  atención gratuita). Obtiene paciente y médico de la cita; no imprime recetas con nombres,
   dosis o duraciones inventados. Las recetas se registran desde el módulo correspondiente.
 - La edición de recepción no permite cambiar el paciente tras registrar su triaje.
 - El recálculo, la validación y el inicio de consulta bloquean primero la cita para
@@ -101,9 +102,9 @@ históricos requieren comprobar la calidad de esas marcas antes de compararlos.
 ## Verificación de la integración
 
 - `npm test`: 12 suites aisladas, incluidas 84 comprobaciones del motor y sus entradas.
-- `npm run test:flujo`: 57 comprobaciones con esquema y rutas reales en PGlite.
+- `npm run test:flujo`: 58 comprobaciones con esquema y rutas reales en PGlite.
 - `npm run test:postgres-isolated`: clúster PostgreSQL temporal independiente;
-  incluye el flujo completo (59 comprobaciones), validación y recálculo concurrentes,
+  incluye el flujo completo (60 comprobaciones), validación y recálculo concurrentes,
   consultas compartidas, pagos, atención rápida, resumen diario y correos simulados.
 - `npm run build` en frontend: compilación de producción.
 
