@@ -5,7 +5,7 @@ const { logAuditEvent } = require("../../services/audit");
 const svc = require("./prescripciones.service");
 
 const router = express.Router();
-router.use(requireAuth);
+router.use(requireAuth, requireRole("admin", "medico", "enfermero", "fundacion"));
 
 router.get("/", async (req, res) => {
   try { res.json(await svc.getAll(req.query)); }

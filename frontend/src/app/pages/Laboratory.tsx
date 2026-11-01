@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
-import { Can } from "../auth/usePermissions";
+import { Can, usePermissions } from "../auth/usePermissions";
 import { fetchAppointments, type AppointmentRecord } from "../api/appointments";
 import {
   createLabSupply,
@@ -693,6 +693,7 @@ function SupplyMovementModal({
 }
 
 export default function Laboratory() {
+  const { role } = usePermissions();
   const [orders, setOrders] = useState<LabOrderRecord[]>([]);
   const [supplies, setSupplies] = useState<LabSupplyRecord[]>([]);
   const [supplyAlerts, setSupplyAlerts] = useState<LabSupplyAlertsResponse>(() => buildEmptyAlerts());
@@ -1163,7 +1164,7 @@ export default function Laboratory() {
                     ))}
                   </select>
 
-                  <Can module="laboratory" action="edit">
+                  {(role === "admin") && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1175,7 +1176,7 @@ export default function Laboratory() {
                       <FlaskConical className="h-4 w-4" />
                       {order.resultado ? "Editar resultado" : "Cargar resultado"}
                     </button>
-                  </Can>
+                  )}
 
                   {order.validado_por && (
                     <div className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
@@ -1211,7 +1212,7 @@ export default function Laboratory() {
                 <RefreshCw className="h-4 w-4" />
                 Actualizar
               </button>
-              <Can module="laboratory" action="create">
+              {(role === "admin") && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1224,7 +1225,7 @@ export default function Laboratory() {
                   <Plus className="h-4 w-4" />
                   Nuevo insumo
                 </button>
-              </Can>
+              )}
             </div>
           </div>
 
@@ -1319,7 +1320,7 @@ export default function Laboratory() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
-                              <Can module="laboratory" action="edit">
+                              {(role === "admin" || role === "enfermero") && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1331,8 +1332,8 @@ export default function Laboratory() {
                                   <ArrowDownUp className="h-3.5 w-3.5" />
                                   Movimiento
                                 </button>
-                              </Can>
-                              <Can module="laboratory" action="edit">
+                              )}
+                              {(role === "admin") && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1344,7 +1345,7 @@ export default function Laboratory() {
                                 >
                                   Editar
                                 </button>
-                              </Can>
+                              )}
                             </div>
                           </td>
                         </tr>

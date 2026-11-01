@@ -30,17 +30,8 @@ const VIEW: ModulePermissions = { view: true };
 const VIEW_EDIT: ModulePermissions = { view: true, edit: true };
 const VIEW_CREATE_EDIT: ModulePermissions = { view: true, create: true, edit: true };
 
-/**
- * Matriz de permisos por rol y modulo. Son valores por defecto razonables para
- * un centro medico; ajusta cualquier celda segun como trabaje tu equipo.
- *
- *              patients          appointments     triage  doctors  laboratory        inventory  records           prescriptions  billing           prioritization  reports  settings
- * admin        todo              todo             todo    todo     todo              todo       todo              todo           todo              todo            todo     todo
- * recepcionista ingresar/editar  ingresar/editar  -       -        -                 -          -                 -              ingresar/editar   -               -        -
- * enfermero    ver               ver              todo    ver      ingresar/editar   ver/editar ingresar/editar   ver            -                 todo            -        -
- * medico       ver/editar        ver/editar       ver     ver      ingresar/editar   -          todo              todo           -                 ver/editar      ver      -
- * fundacion    -                 ver              -       ver      ver               ver        -                 ver           todo              -               todo     -
- */
+// Los botones reflejan las operaciones existentes en el backend; cada API
+// comprueba sus permisos de forma independiente. No se permite borrar datos clínicos.
 export const PERMISSIONS: Record<UserRole, RolePermissions> = {
   admin: {
     patients: ALL,
@@ -73,32 +64,32 @@ export const PERMISSIONS: Record<UserRole, RolePermissions> = {
     settings: NONE,
   },
   enfermero: {
-    // Consulta pacientes y citas, controla triaje/prioridad, y apoya en
-    // laboratorio/expediente sin poder eliminar nada.
-    patients: VIEW,
-    appointments: VIEW,
-    triage: ALL,
+    // Registra pacientes, llegadas y evaluaciones. Consulta expedientes;
+    // la validación de prioridad y la consulta médica corresponden al médico.
+    patients: VIEW_CREATE_EDIT,
+    appointments: VIEW_CREATE_EDIT,
+    triage: VIEW_CREATE_EDIT,
     doctors: VIEW,
-    laboratory: VIEW_CREATE_EDIT,
+    laboratory: VIEW_EDIT,
     inventory: VIEW_EDIT,
-    records: VIEW_CREATE_EDIT,
+    records: VIEW,
     prescriptions: VIEW,
     billing: NONE,
-    prioritization: ALL,
+    prioritization: VIEW,
     reports: NONE,
     settings: NONE,
   },
   medico: {
-    // Historia clinica y recetas completas; pacientes/citas editables; sin
+    // Crea/edita historias y recetas; consulta pacientes y agenda; sin
     // acceso administrativo ni de inventario.
-    patients: VIEW_EDIT,
-    appointments: VIEW_EDIT,
+    patients: VIEW,
+    appointments: VIEW,
     triage: VIEW,
     doctors: VIEW,
     laboratory: VIEW_CREATE_EDIT,
     inventory: NONE,
-    records: ALL,
-    prescriptions: ALL,
+    records: VIEW_CREATE_EDIT,
+    prescriptions: VIEW_CREATE_EDIT,
     billing: NONE,
     prioritization: VIEW_EDIT,
     reports: VIEW,

@@ -6,7 +6,7 @@ const svc = require("./visitas.service");
 const { getFullClinicalHistory } = require("../analisis/analisis.service");
 
 const router = express.Router();
-router.use(requireAuth);
+router.use(requireAuth, requireRole("admin", "medico", "enfermero"));
 
 router.get("/historial/:idPaciente", async (req, res) => {
   try {

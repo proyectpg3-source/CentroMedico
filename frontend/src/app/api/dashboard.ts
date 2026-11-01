@@ -3,6 +3,7 @@ import { request } from "./client";
 
 export interface DashboardSummaryRecord {
   total_pacientes: number;
+  total_visitas: number;
   total_medicos: number;
   total_citas: number;
   citas_por_mes: Array<{ mes: string; citas: number }>;

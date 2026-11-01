@@ -24,7 +24,9 @@ import { fetchCharges, fetchPayments } from "../api/billing";
 import { fetchLabOrders } from "../api/laboratory";
 import { fetchPatientCount } from "../api/patients";
 import { fetchPrescriptions } from "../api/prescriptions";
-import { fetchVisits } from "../api/visits";
+import { fetchDashboardSummary } from "../api/dashboard";
+import { useAuth } from "../auth/AuthContext";
+import { canAccess } from "../auth/roles";
 import { formatCurrency, getErrorMessage, numericValue } from "../lib/format";
 
 const statusColors = {
@@ -41,8 +43,10 @@ const originColors = {
 } as const;
 
 export default function Reports() {
+  const { user } = useAuth();
+  const canReadFinance = canAccess(user?.rol, "/billing");
   const [patientCount, setPatientCount] = useState(0);
-  const [visits, setVisits] = useState<any[]>([]);
+  const [visitCount, setVisitCount] = useState(0);
   const [orders, setOrders] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [charges, setCharges] = useState<any[]>([]);
@@ -67,15 +71,15 @@ export default function Reports() {
           paymentsResponse,
         ] = await Promise.all([
           fetchPatientCount(controller.signal),
-          fetchVisits(undefined, controller.signal),
+          fetchDashboardSummary(controller.signal),
           fetchLabOrders(undefined, controller.signal),
           fetchPrescriptions(undefined, controller.signal),
-          fetchCharges(undefined, controller.signal),
-          fetchPayments(undefined, controller.signal),
+          canReadFinance ? fetchCharges(undefined, controller.signal) : Promise.resolve([]),
+          canReadFinance ? fetchPayments(undefined, controller.signal) : Promise.resolve([]),
         ]);
 
         setPatientCount(patientsResponse);
-        setVisits(visitsResponse);
+        setVisitCount(visitsResponse.total_visitas);
         setOrders(ordersResponse);
         setPrescriptions(prescriptionsResponse);
         setCharges(chargesResponse);
@@ -95,7 +99,7 @@ export default function Reports() {
 
     void loadReports();
     return () => controller.abort();
-  }, []);
+  }, [canReadFinance]);
 
   const totalBilled = useMemo(
     () => charges.reduce((sum, charge) => sum + numericValue(charge.total), 0),
@@ -159,7 +163,7 @@ export default function Reports() {
     () => [
       {
         label: "Visitas clinicas",
-        total: visits.length,
+        total: visitCount,
         icon: BriefcaseMedical,
         tone: "bg-blue-50 text-blue-600",
       },
@@ -177,12 +181,12 @@ export default function Reports() {
       },
       {
         label: "Pagos aplicados",
-        total: payments.length,
+        total: canReadFinance ? payments.length : "Acceso restringido",
         icon: Coins,
         tone: "bg-amber-50 text-amber-600",
       },
     ],
-    [orders.length, payments.length, prescriptions.length, visits.length]
+    [orders.length, payments.length, prescriptions.length, visitCount, canReadFinance]
   );
 
   return (
@@ -217,19 +221,19 @@ export default function Reports() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Facturado</p>
             <p className="mt-2 text-3xl font-semibold text-slate-900">
-              {loading ? "..." : formatCurrency(totalBilled)}
+              {!canReadFinance ? "Acceso restringido" : loading ? "..." : formatCurrency(totalBilled)}
             </p>
           </div>
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Cobrado</p>
             <p className="mt-2 text-3xl font-semibold text-slate-900">
-              {loading ? "..." : formatCurrency(totalCollected)}
+              {!canReadFinance ? "Acceso restringido" : loading ? "..." : formatCurrency(totalCollected)}
             </p>
           </div>
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Saldo pendiente</p>
             <p className="mt-2 text-3xl font-semibold text-slate-900">
-              {loading ? "..." : formatCurrency(totalPending)}
+              {!canReadFinance ? "Acceso restringido" : loading ? "..." : formatCurrency(totalPending)}
             </p>
           </div>
         </div>
@@ -253,6 +257,7 @@ export default function Reports() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {canReadFinance && (
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-slate-900">Ingresos por origen</h3>
@@ -274,6 +279,7 @@ export default function Reports() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          )}
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
@@ -307,6 +313,7 @@ export default function Reports() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_0.9fr]">
+          {canReadFinance && (
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
@@ -338,6 +345,7 @@ export default function Reports() {
               )}
             </div>
           </div>
+          )}
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
@@ -348,11 +356,9 @@ export default function Reports() {
             </div>
             <div className="space-y-3">
               {[
-                `Se han registrado ${visits.length} visitas clinicas formales con ${orders.length} ordenes de laboratorio enlazadas.`,
-                `El flujo de medicacion suma ${prescriptions.length} prescripciones y un valor bruto de ${formatCurrency(
-                  prescriptions.reduce((sum, prescription) => sum + numericValue(prescription.costo), 0)
-                )}.`,
-                `El sistema ha facturado ${formatCurrency(totalBilled)} y conserva ${formatCurrency(totalPending)} en saldo pendiente.`,
+                `Se han registrado ${visitCount} visitas clinicas formales con ${orders.length} ordenes de laboratorio enlazadas.`,
+                `El flujo de medicacion suma ${prescriptions.length} prescripciones.`,
+                ...(canReadFinance ? [`El sistema ha facturado ${formatCurrency(totalBilled)} y conserva ${formatCurrency(totalPending)} en saldo pendiente.`] : []),
               ].map((recommendation, index) => (
                 <div key={recommendation} className="flex gap-3 rounded-2xl bg-slate-50 px-4 py-3">
                   <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">

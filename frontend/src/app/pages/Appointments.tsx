@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
-import { Can } from "../auth/usePermissions";
+import { Can, usePermissions } from "../auth/usePermissions";
 import {
   createAppointment,
   fetchAppointments,
@@ -755,11 +755,12 @@ function AppointmentCard({
   onOpenOrder: (appointment: AppointmentRecord) => void;
   isStatusUpdating: boolean;
 }) {
+  const { can, role } = usePermissions();
   const status = statusMeta[appointment.estado];
   const priority = appointment.prioridad_final || appointment.nivel_propuesto
     ? getPriorityMeta(appointment.prioridad_clinica)
     : { badge: "border-slate-200 bg-slate-100 text-slate-600" };
-  const canCreateVisit = appointment.estado === "en_curso" && !appointment.id_visita;
+  const canCreateVisit = can("records", "create") && appointment.estado === "en_curso" && !appointment.id_visita;
   const canCreateOrder = appointment.estado !== "cancelada";
 
   return (
@@ -854,7 +855,7 @@ function AppointmentCard({
             onChange={(event) =>
               onStatusChange(appointment.id_cita, event.target.value as AppointmentStatus)
             }
-            disabled={isStatusUpdating || !["pendiente", "confirmada"].includes(appointment.estado)}
+            disabled={role === "fundacion" || isStatusUpdating || !["pendiente", "confirmada"].includes(appointment.estado)}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
           >
             {appointmentStatuses.filter((value) => value === appointment.estado || ["confirmada", "cancelada"].includes(value)).map((value) => (
@@ -884,7 +885,7 @@ function AppointmentCard({
         ) : (
           <div className="inline-flex items-center gap-2 rounded-2xl bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700">
             <XCircle className="h-4 w-4" />
-            Cita cancelada
+            {appointment.estado === "cancelada" ? "Cita cancelada" : "Atención gestionada desde la cola médica"}
           </div>
         )}
 

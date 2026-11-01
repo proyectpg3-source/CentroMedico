@@ -5,7 +5,7 @@ const { logAuditEvent } = require("../../services/audit");
 const svc = require("./laboratorio.service");
 
 const router = express.Router();
-router.use(requireAuth);
+router.use(requireAuth, requireRole("admin", "medico", "enfermero", "fundacion"));
 
 // ─── Insumos y alertas ───────────────────────────────────────────────────────
 
