@@ -4,7 +4,12 @@ const {
   parsePagination, buildPaginatedResponse,
 } = require("../../utils/validators");
 const { CITA_SELECT } = require("../../utils/queries");
-const { calcularPrioridadParaPaciente } = require("../analisis/analisis.service");
+
+const PENDING_PRIORITY = Object.freeze({
+  prioridad_clinica: "baja",
+  puntaje_prioridad: 0,
+  motivos_prioridad: "Pendiente de evaluación de Enfermería y validación profesional.",
+});
 
 const ALLOWED_STATES = new Set(["pendiente", "confirmada", "en_curso", "completada", "cancelada"]);
 
@@ -17,6 +22,7 @@ function sanitize(body) {
     motivo: getOptionalString(body.motivo),
     triaje_notas: getOptionalString(body.triaje_notas),
     estado: estado || null,
+    registrar_llegada: body.registrar_llegada === true,
   };
 }
 
@@ -93,13 +99,17 @@ async function getById(id) {
 async function create(body) {
   const c = sanitize(body);
   validateBeforeWrite(c);
-  const prioridad = await calcularPrioridadParaPaciente(c.id_paciente, c);
+  if (["en_curso", "completada"].includes(c.estado)) throw Object.assign(new Error("Inicia la atención desde la cola médica y finaliza guardando la consulta."), { status: 400 });
+  if (c.registrar_llegada) c.estado = "confirmada";
+  // La prioridad P1–P4 se define en la evaluación de Enfermería y se valida
+  // después; al crear la cita no se infiere ninguna prioridad del motivo.
+  const prioridad = PENDING_PRIORITY;
   const result = await pool.query(
     `INSERT INTO citas (
        id_paciente, id_medico, fecha_hora, motivo, estado, triaje_notas,
        prioridad_clinica, puntaje_prioridad, motivos_prioridad, hora_llegada
      )
-     VALUES ($1,$2,$3,$4,COALESCE($5,'pendiente'),$6,$7,$8,$9,DEFAULT)
+     VALUES ($1,$2,$3,$4,COALESCE($5,'pendiente'),$6,$7,$8,$9,CASE WHEN $10::boolean THEN NOW() ELSE NULL END)
      RETURNING id_cita`,
     [
       c.id_paciente,
@@ -111,44 +121,50 @@ async function create(body) {
       prioridad.prioridad_clinica,
       prioridad.puntaje_prioridad,
       prioridad.motivos_prioridad,
+      c.registrar_llegada,
     ]
   );
   return getById(result.rows[0].id_cita);
 }
 
 async function update(id, body) {
-  const current = await pool.query("SELECT * FROM citas WHERE id_cita=$1", [id]);
-  if (!current.rows[0]) return null;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const current = await client.query("SELECT * FROM citas WHERE id_cita=$1 FOR UPDATE", [id]);
+    if (!current.rows[0]) { await client.query("ROLLBACK"); return null; }
 
-  const c = sanitize({ ...current.rows[0], ...body });
-  validateBeforeWrite(c);
-  const prioridad = await calcularPrioridadParaPaciente(c.id_paciente, c);
-  await pool.query(
-    `UPDATE citas
-     SET id_paciente=$1,
-         id_medico=$2,
-         fecha_hora=$3,
-         motivo=$4,
-         estado=$5,
-         triaje_notas=$6,
-         prioridad_clinica=$7,
-         puntaje_prioridad=$8,
-         motivos_prioridad=$9
-     WHERE id_cita=$10`,
-    [
-      c.id_paciente,
-      c.id_medico,
-      c.fecha_hora,
-      c.motivo,
-      c.estado || "pendiente",
-      c.triaje_notas,
-      prioridad.prioridad_clinica,
-      prioridad.puntaje_prioridad,
-      prioridad.motivos_prioridad,
-      id,
-    ]
-  );
-  return getById(id);
+    const c = sanitize({ ...current.rows[0], ...body });
+    validateBeforeWrite(c);
+    if (c.estado !== current.rows[0].estado) throw Object.assign(new Error("Usa la acción de llegada o cancelación; la atención se gestiona desde la cola médica."), { status: 400 });
+    if (["en_curso", "completada", "cancelada"].includes(current.rows[0].estado)) throw Object.assign(new Error("La cita ya no admite cambios de recepción."), { status: 400 });
+    if (c.id_paciente !== current.rows[0].id_paciente) {
+      const records = await client.query("SELECT id_triaje FROM triajes WHERE id_cita=$1", [id]);
+      if (records.rows.length) throw Object.assign(new Error("No se puede cambiar el paciente de una cita con evaluación clínica."), { status: 400 });
+    }
+    await client.query(
+      `UPDATE citas
+       SET id_paciente=$1,
+           id_medico=$2,
+           fecha_hora=$3,
+           motivo=$4,
+           estado=$5,
+           triaje_notas=$6
+       WHERE id_cita=$7`,
+      [
+        c.id_paciente,
+        c.id_medico,
+        c.fecha_hora,
+        c.motivo,
+        c.estado || "pendiente",
+        c.triaje_notas,
+        id,
+      ]
+    );
+    await client.query("COMMIT");
+    return getById(id);
+  } catch (error) { await client.query("ROLLBACK"); throw error; }
+  finally { client.release(); }
 }
 
 async function updateStatus(id, estado) {
@@ -160,11 +176,12 @@ async function updateStatus(id, estado) {
     );
   }
 
+  if (["en_curso", "completada"].includes(normalizedStatus)) throw Object.assign(new Error("Inicia la atención desde la cola médica y finaliza guardando la consulta."), { status: 409 });
   const result = await pool.query(
     `UPDATE citas
      SET estado=$2,
          hora_llegada=CASE
-           WHEN $2 IN ('en_curso', 'completada') THEN COALESCE(hora_llegada, NOW())
+           WHEN $2 IN ('confirmada', 'en_curso', 'completada') THEN COALESCE(hora_llegada, NOW())
            ELSE hora_llegada
          END,
          hora_inicio_atencion=CASE
@@ -175,7 +192,7 @@ async function updateStatus(id, estado) {
            WHEN $2 IN ('completada', 'cancelada') AND hora_fin_atencion IS NULL THEN NOW()
            ELSE hora_fin_atencion
          END
-     WHERE id_cita=$1
+     WHERE id_cita=$1 AND estado IN ('pendiente', 'confirmada')
      RETURNING id_cita`,
     [id, normalizedStatus]
   );

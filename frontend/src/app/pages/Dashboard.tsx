@@ -76,6 +76,8 @@ const priorityMeta: Record<ClinicalPriority, { label: string; color: string }> =
   baja: { label: "Baja", color: "#16a34a" },
 };
 
+const LEVEL_TO_PRIORITY: Record<"P1" | "P2" | "P3" | "P4", ClinicalPriority> = { P1: "critica", P2: "alta", P3: "media", P4: "baja" };
+
 const currencyFormatter = new Intl.NumberFormat("es-GT", {
   style: "currency",
   currency: "GTQ",
@@ -422,9 +424,8 @@ export default function Dashboard() {
       return [];
     }
 
-    return [...state.priorityQueue]
-      .sort((left, right) => right.puntaje_prioridad - left.puntaje_prioridad)
-      .slice(0, 6);
+    // El backend ya ordena por prioridad validada (P1–P4) y hora de ingreso a la cola.
+    return [...state.priorityQueue].slice(0, 6);
   }, [state.priorityQueue]);
 
   const doctorLoad = useMemo(() => {
@@ -668,7 +669,12 @@ export default function Dashboard() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium text-foreground">{item.paciente_nombre || "Paciente pendiente"}</p>
-                        <ColorTag color={priorityMeta[item.prioridad_clinica].color} label={priorityMeta[item.prioridad_clinica].label} />
+                        {(() => {
+                          const level = item.prioridad_final || item.nivel_propuesto;
+                          if (!level) return <ColorTag color="#64748b" label={item.id_triaje ? "Sin propuesta" : "Sin evaluar"} />;
+                          const meta = priorityMeta[LEVEL_TO_PRIORITY[level]];
+                          return <ColorTag color={meta.color} label={`${level} ${item.prioridad_final ? "validada" : "propuesta"}`} />;
+                        })()}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
                         {item.motivo || "Motivo no especificado"} · {item.medico_nombre || "Doctor por asignar"}

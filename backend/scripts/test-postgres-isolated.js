@@ -34,7 +34,7 @@ async function freePort() {
     const c = new Client({ host: '127.0.0.1', port, user: 'postgres', password, database: 'postgres' });
     await c.connect();
     try { await c.query('CREATE DATABASE centromedico_isolated_test'); } finally { await c.end(); }
-    for (const script of ['test-query-schema.js', 'test-payments-concurrency.js', 'test-clinical-flow.js', 'test-quick-care.js', 'test-daily-summary-postgres.js', 'test-email-postgres.js']) {
+    for (const script of ['test-query-schema.js', 'test-payments-concurrency.js', 'test-clinical-flow.js', 'test-quick-care.js', 'test-daily-summary-postgres.js', 'test-email-postgres.js', 'test-flujo-pglite.js']) {
       console.log('EJECUTANDO ' + script + ' en PostgreSQL temporal');
       try {
         const output = run(process.execPath, [path.join(__dirname, script)], env);

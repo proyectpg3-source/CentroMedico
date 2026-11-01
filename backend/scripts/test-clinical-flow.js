@@ -86,12 +86,12 @@ async function main() {
       method: 'POST', headers,
       body: JSON.stringify({ id_paciente: patientId, id_medico: doctor.id_medico,
         fecha_hora: appointmentDate, motivo: 'Fiebre alta y dolor abdominal',
-        estado: 'pendiente', triaje_notas: 'Ingreso sintético de recepción' }),
+        registrar_llegada: true, triaje_notas: 'Ingreso sintético de recepción' }),
     });
     const appointment = await appointmentResponse.json();
     assert.equal(appointmentResponse.status, 201, JSON.stringify(appointment));
     assert.equal(appointment.fecha_hora, appointmentDate);
-    assert.equal(appointment.estado, 'pendiente');
+    assert.equal(appointment.estado, 'confirmada');
     assert.equal(appointment.triaje_notas, 'Ingreso sintético de recepción');
     assert.ok(appointment.hora_llegada && !Number.isNaN(new Date(appointment.hora_llegada).getTime()), 'El alta conserva el valor predeterminado de hora de llegada');
     const appointmentId = appointment.id_cita;
@@ -119,6 +119,12 @@ async function main() {
     const triage = await triageResponse.json();
     if (!triageResponse.ok) throw new Error(JSON.stringify(triage));
 
+    const validationResponse = await fetch(`${baseUrl}/api/triajes/validar`, {
+      method: 'PATCH', headers, body: JSON.stringify({ id_cita: appointmentId, prioridad_final: 'P2', justificacion: 'Clasificación manual por profesional en escenario sintético.' }),
+    });
+    assert.equal(validationResponse.status, 200, JSON.stringify(await validationResponse.json()));
+    const startResponse = await fetch(`${baseUrl}/api/triajes/cola/${appointmentId}/iniciar`, { method: 'POST', headers });
+    assert.equal(startResponse.status, 200, JSON.stringify(await startResponse.json()));
     const visitResponse = await fetch(`${baseUrl}/api/visitas`, {
       method: "POST",
       headers,

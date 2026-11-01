@@ -322,6 +322,7 @@ function AppointmentFormModal({
               <label className="text-sm font-medium text-slate-700">Estado</label>
               <select
                 value={form.estado}
+                disabled={Boolean(appointment)}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -330,7 +331,7 @@ function AppointmentFormModal({
                 }
                 className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
               >
-                {appointmentStatuses.map((status) => (
+                {(["pendiente", "confirmada"] as AppointmentStatus[]).map((status) => (
                   <option key={status} value={status}>
                     {statusMeta[status].label}
                   </option>
@@ -755,8 +756,10 @@ function AppointmentCard({
   isStatusUpdating: boolean;
 }) {
   const status = statusMeta[appointment.estado];
-  const priority = getPriorityMeta(appointment.prioridad_clinica);
-  const canCreateVisit = appointment.estado !== "cancelada" && !appointment.id_visita;
+  const priority = appointment.prioridad_final || appointment.nivel_propuesto
+    ? getPriorityMeta(appointment.prioridad_clinica)
+    : { badge: "border-slate-200 bg-slate-100 text-slate-600" };
+  const canCreateVisit = appointment.estado === "en_curso" && !appointment.id_visita;
   const canCreateOrder = appointment.estado !== "cancelada";
 
   return (
@@ -782,7 +785,10 @@ function AppointmentCard({
               </span>
             )}
             <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${priority.badge}`}>
-              {priority.label} · {appointment.puntaje_prioridad || 10} pts
+              {appointment.prioridad_final
+                ? `${appointment.prioridad_final} validada`
+                : appointment.nivel_propuesto ? `${appointment.nivel_propuesto} propuesta`
+                : "Pendiente de evaluación / validación"}
             </span>
           </div>
 
@@ -848,10 +854,10 @@ function AppointmentCard({
             onChange={(event) =>
               onStatusChange(appointment.id_cita, event.target.value as AppointmentStatus)
             }
-            disabled={isStatusUpdating}
+            disabled={isStatusUpdating || !["pendiente", "confirmada"].includes(appointment.estado)}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
           >
-            {appointmentStatuses.map((value) => (
+            {appointmentStatuses.filter((value) => value === appointment.estado || ["confirmada", "cancelada"].includes(value)).map((value) => (
               <option key={value} value={value}>
                 {statusMeta[value].label}
               </option>

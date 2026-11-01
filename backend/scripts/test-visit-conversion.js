@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
 const secret = crypto.randomBytes(48).toString('hex'); process.env.JWT_SECRET = secret;
 let appointment, visit, charge, insertions, committed;
-function reset(state = 'confirmada') {
+function reset(state = 'en_curso') {
   appointment = { id_cita: 41, id_paciente: 51, id_medico: 61, fecha_hora: '2026-10-11T16:00:00Z', motivo: 'Consulta sintética', estado: state };
   visit = null; charge = null; insertions = 0; committed = false;
 }
@@ -14,6 +14,8 @@ async function query(sql, params = []) {
   if (s.startsWith('SELECT id_usuario, nombre, email, rol, id_medico, activo FROM usuarios WHERE')) return { rows: [{ id_usuario: 1, rol: 'admin', activo: true }] };
   if (['BEGIN','ROLLBACK'].includes(s)) return { rows: [] };
   if (s === 'COMMIT') { committed=true; return { rows: [] }; }
+  if (s === 'SELECT estado FROM citas WHERE id_cita=$1 FOR UPDATE') return { rows: params[0]===41 ? [appointment] : [] };
+  if (s.startsWith('SELECT id_triaje FROM triajes')) return { rows: [{ id_triaje: 1 }] };
   if (s === 'SELECT * FROM citas WHERE id_cita=$1') return { rows: params[0]===41 ? [appointment] : [] };
   if (s.startsWith('INSERT INTO visitas_medicas ')) {
     if (visit) throw Object.assign(new Error('Synthetic unique violation'), { code: '23505' });

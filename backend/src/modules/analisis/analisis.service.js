@@ -246,6 +246,11 @@ async function getColaPriorizada() {
        t.temperatura,
        t.saturacion_oxigeno,
        t.peso,
+       t.nivel_propuesto,
+       t.prioridad_final,
+       t.estado_propuesta,
+       t.estado_prioridad,
+       t.fecha_validacion,
        GREATEST(
          0,
          ROUND(EXTRACT(EPOCH FROM (COALESCE(c.hora_inicio_atencion, NOW()) - GREATEST(c.fecha_hora, COALESCE(c.hora_llegada, c.fecha_hora)))) / 60)
@@ -273,14 +278,13 @@ async function getColaPriorizada() {
      LEFT JOIN triajes t ON t.id_cita = c.id_cita
      WHERE c.estado IN ('pendiente', 'confirmada', 'en_curso')
      ORDER BY
-       c.puntaje_prioridad DESC,
-       CASE c.prioridad_clinica
-         WHEN 'critica' THEN 1
-         WHEN 'alta' THEN 2
-         WHEN 'media' THEN 3
-         ELSE 4
+       -- Primero las prioridades validadas (P1–P4) por hora de ingreso a la cola;
+       -- después las propuestas pendientes de validación; al final lo no evaluado.
+       CASE WHEN t.estado_prioridad = 'validado' THEN 0 WHEN t.nivel_propuesto IS NOT NULL THEN 1 ELSE 2 END,
+       CASE COALESCE(t.prioridad_final, t.nivel_propuesto)
+         WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 WHEN 'P4' THEN 4 ELSE 5
        END,
-       c.fecha_hora ASC`
+       COALESCE(t.fecha_validacion, c.hora_llegada, c.fecha_hora) ASC`
   );
 
   return result.rows.map((row) => ({ ...row, evidencia_priorizacion: buildEvidence(row) }));

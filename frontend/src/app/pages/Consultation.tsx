@@ -12,12 +12,11 @@ import {
   Activity,
   History,
   TriangleAlert,
-  Printer
 } from "lucide-react";
+import { useNavigate, useParams } from "react-router";
 import { Header } from "../components/layout/Header";
 import { request } from "../api/client";
-import { formatDateTime } from "../lib/format";
-import PrescriptionPrint from "./PrescriptionPrint";
+import { formatDateTime, getErrorMessage } from "../lib/format";
 
 interface ClinicalHistory {
   patient: any;
@@ -34,7 +33,11 @@ interface ClinicalHistory {
   };
 }
 
-export default function MedicalConsultation({ appointmentId }: { appointmentId: string }) {
+export default function MedicalConsultation({ appointmentId: appointmentIdProp }: { appointmentId?: string } = {}) {
+  // La ruta /consulta/:appointmentId no pasa props: el id viene de la URL.
+  const params = useParams();
+  const navigate = useNavigate();
+  const appointmentId = appointmentIdProp ?? params.appointmentId ?? "";
   const [history, setHistory] = useState<ClinicalHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [visitForm, setVisitForm] = useState({
@@ -45,7 +48,7 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
     examen_fisico: "",
   });
   const [saving, setSaving] = useState(false);
-  const [printPrescription, setPrintPrescription] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadPatientData() {
@@ -54,7 +57,7 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
         const fullHistory = await request<ClinicalHistory>(`/api/visitas/historial/${appointment.id_paciente}`);
         setHistory(fullHistory);
       } catch (error) {
-        console.error("Error loading clinical history:", error);
+        setError(getErrorMessage(error, "No se pudo cargar la consulta."));
       } finally {
         setLoading(false);
       }
@@ -70,14 +73,13 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
         body: JSON.stringify({
           id_cita: appointmentId,
           ...visitForm,
-          id_paciente: history?.patient.id_paciente,
-          id_medico: history?.patient.id_medico,
           fecha_visita: new Date().toISOString(),
         })
       });
-      alert("Consulta guardada exitosamente");
+      alert("Consulta guardada y finalizada.");
+      navigate("/cola-espera");
     } catch (error) {
-      alert("Error al guardar la consulta");
+      setError(getErrorMessage(error, "No se pudo guardar la consulta."));
     } finally {
       setSaving(false);
     }
@@ -89,7 +91,7 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
     </div>
   );
 
-  if (!history) return <div className="p-8 text-center">No se encontró información del paciente.</div>;
+  if (!history) return <div className="p-8 text-center">{error || "No se encontró información del paciente."}</div>;
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -98,38 +100,7 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
         subtitle={`Paciente ID: ${history.patient.id_paciente} · ${history.patient.sexo} · ${history.patient.fecha_nacimiento}`}
       />
 
-      {printPrescription ? (
-        <div className="p-6">
-          <button
-            onClick={() => setPrintPrescription(false)}
-            className="mb-4 flex items-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> Volver a la Consulta
-          </button>
-          <div className="mx-auto max-w-4xl bg-white shadow-2xl rounded-lg overflow-hidden">
-            <PrescriptionPrint
-              patient={history.patient}
-              doctor={{ nombre: "Dr. Médico Especialista", especialidad: "Medicina General" }}
-              prescription={{
-                medicamento: visitForm.tratamiento || "Sin medicamento",
-                dosis: "Ver indicaciones",
-                frecuencia: "Según prescripción",
-                duracion: "7 días",
-                instrucciones: "Siga las instrucciones del médico estrictamente."
-              }}
-              date={new Date().toLocaleDateString()}
-            />
-            <div className="p-4 bg-slate-100 flex justify-center no-print">
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700 shadow-md transition-all"
-              >
-                <Printer className="h-4 w-4" /> Imprimir Receta Profesional
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
+      {error && <p role="alert" className="mx-6 mt-4 text-red-700">{error}</p>}
         <div className="flex-1 p-4 lg:p-6">
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
@@ -257,13 +228,6 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
 
                 <div className="mt-8 flex justify-end gap-3">
                   <button
-                    onClick={() => setPrintPrescription(true)}
-                    disabled={!visitForm.tratamiento}
-                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
-                  >
-                    <Printer className="h-4 w-4" /> Previsualizar Receta
-                  </button>
-                  <button
                     onClick={handleSaveVisit}
                     disabled={saving || !visitForm.diagnostico}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md"
@@ -323,7 +287,6 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
           </div>
 
         </div>
-      )}
     </div>
   );
 }

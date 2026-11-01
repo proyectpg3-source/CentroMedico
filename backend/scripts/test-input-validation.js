@@ -5,8 +5,9 @@ process.env.JWT_SECRET = require('node:crypto').randomBytes(48).toString('hex');
 let writes, appointment, role = 'admin';
 const db = { async query(sql, params = []) {
   const s = sql.replace(/\s+/g, ' ').trim();
+  if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(s)) return { rows: [] };
   if (s.startsWith('SELECT id_usuario, nombre, email, rol, id_medico, activo')) return { rows: [{ id_usuario: 1, rol: role, activo: true }] };
-  if (s === 'SELECT * FROM citas WHERE id_cita=$1') return { rows: params[0] === 41 ? [appointment] : [] };
+  if (s === 'SELECT * FROM citas WHERE id_cita=$1 FOR UPDATE') return { rows: params[0] === 41 ? [appointment] : [] };
   if (s.startsWith('SELECT fecha_nacimiento FROM pacientes')) return { rows: [{ fecha_nacimiento: '1990-01-01' }] };
   if (s.includes('FROM visitas_medicas') && s.includes('ORDER BY')) return { rows: [] };
   if (s.startsWith('INSERT INTO citas (')) {
@@ -22,6 +23,7 @@ const db = { async query(sql, params = []) {
   if (s.startsWith('INSERT INTO eventos_auditoria')) return { rows: [] };
   throw new Error('UNEXPECTED_QUERY: ' + s);
 } };
+db.connect = async () => ({ query: db.query.bind(db), release() {} });
 for (const [file, exports] of [['../src/config/db', db], ['../schema', { ensureSchema: async () => {} }]]) {
   const id = require.resolve(file); require.cache[id] = { id, filename: id, loaded: true, exports };
 }

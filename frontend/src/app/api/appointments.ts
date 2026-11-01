@@ -19,6 +19,10 @@ export interface AppointmentRecord {
   prioridad_clinica: "baja" | "media" | "alta" | "critica";
   puntaje_prioridad: number;
   motivos_prioridad: string | null;
+  nivel_propuesto?: "P1" | "P2" | "P3" | "P4" | null;
+  prioridad_final?: "P1" | "P2" | "P3" | "P4" | null;
+  estado_prioridad?: "propuesto" | "validado" | null;
+  estado_propuesta?: string | null;
   hora_llegada: string | null;
   hora_inicio_atencion: string | null;
   hora_fin_atencion: string | null;
@@ -32,6 +36,7 @@ export interface AppointmentRecord {
 }
 
 export interface AppointmentPayload {
+  registrar_llegada?: boolean;
   id_paciente: number;
   id_medico: number;
   fecha_hora: string;

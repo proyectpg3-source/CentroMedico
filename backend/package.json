@@ -19,7 +19,8 @@
     "secret:generate": "node scripts/generate-secret.js",
     "test:db": "node scripts/test-payments-concurrency.js",
     "test:postgres-isolated": "node scripts/test-postgres-isolated.js",
-    "test:auth-hardening": "node scripts/test-auth-hardening.js"
+    "test:auth-hardening": "node scripts/test-auth-hardening.js",
+    "test:flujo": "node scripts/test-flujo-pglite.js"
   },
   "keywords": [],
   "author": "",
@@ -38,5 +39,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.17"
   }
 }

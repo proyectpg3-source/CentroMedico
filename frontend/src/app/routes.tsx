@@ -13,6 +13,7 @@ import Billing from "./pages/Billing";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
+import Indicators from "./pages/Indicators";
 import Prioritization from "./pages/Prioritization";
 import Triage from "./pages/Triage";
 import WaitingQueue from "./pages/WaitingQueue";
@@ -61,9 +62,9 @@ export const router = createBrowserRouter([
           { element: <RequireRole allowed={MODULE_ACCESS["/appointments"]} />, children: [{ path: "appointments", Component: Appointments }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/recepcion"]} />, children: [{ path: "recepcion", Component: Recepcion }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/triage"]} />, children: [{ path: "triage", Component: Triage }] },
-          { element: <RequireRole allowed={MODULE_ACCESS["/triage"]} />, children: [{ path: "cola-espera", Component: WaitingQueue }] },
+          { element: <RequireRole allowed={MODULE_ACCESS["/cola-espera"]} />, children: [{ path: "cola-espera", Component: WaitingQueue }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/doctors"]} />, children: [{ path: "doctors", Component: Doctors }] },
-          { element: <RequireRole allowed={MODULE_ACCESS["/records"]} />, children: [{ path: "consulta/:appointmentId", Component: Consultation }] },
+          { element: <RequireRole allowed={["admin", "medico"]} />, children: [{ path: "consulta/:appointmentId", Component: Consultation }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/laboratory"]} />, children: [{ path: "laboratory", Component: Laboratory }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/inventory"]} />, children: [{ path: "inventory", Component: Inventory }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/inventario-general"]} />, children: [{ path: "inventario-general", Component: Inventario }] },
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
           { element: <RequireRole allowed={MODULE_ACCESS["/prioritization"]} />, children: [{ path: "prioritization", Component: Prioritization }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/settings"]} />, children: [{ path: "settings", Component: Settings }] },
           { element: <RequireRole allowed={MODULE_ACCESS["/notificaciones"]} />, children: [{ path: "notificaciones", Component: Notifications }] },
+          { element: <RequireRole allowed={MODULE_ACCESS["/indicadores"]} />, children: [{ path: "indicadores", Component: Indicators }] },
           { path: "*", Component: NotFound },
         ],
       },

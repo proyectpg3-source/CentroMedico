@@ -43,6 +43,8 @@ export const MODULE_ACCESS: Record<string, UserRole[]> = {
   "/prediccion-ia": ["admin", "medico", "fundacion"],
   "/reports": ["admin", "medico", "fundacion"],
   "/settings": ["admin"],
+  "/cola-espera": ["admin", "medico", "enfermero"],
+  "/indicadores": ["admin", "medico", "fundacion"],
   "/notificaciones": ["admin", "recepcionista", "enfermero"],
 };
 

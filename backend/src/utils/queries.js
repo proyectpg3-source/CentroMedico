@@ -5,12 +5,14 @@ const CITA_SELECT = `
     c.id_cita, c.id_paciente, c.id_medico, c.fecha_hora, c.motivo, c.estado,
     c.triaje_notas, c.prioridad_clinica, c.puntaje_prioridad, c.motivos_prioridad,
     c.hora_llegada, c.hora_inicio_atencion, c.hora_fin_atencion,
+    tr.nivel_propuesto, tr.prioridad_final, tr.estado_prioridad, tr.estado_propuesta,
     vm.id_visita,
     p.nombre AS paciente_nombre, p.dni AS paciente_dni,
     p.telefono AS paciente_telefono, p.email AS paciente_email,
     m.nombre AS medico_nombre, m.especialidad AS medico_especialidad,
     m.licencia AS medico_licencia
   FROM citas c
+  LEFT JOIN triajes tr ON tr.id_cita = c.id_cita
   LEFT JOIN visitas_medicas vm ON vm.id_cita = c.id_cita
   LEFT JOIN pacientes p ON p.id_paciente = c.id_paciente
   LEFT JOIN medicos m ON m.id_medico = c.id_medico

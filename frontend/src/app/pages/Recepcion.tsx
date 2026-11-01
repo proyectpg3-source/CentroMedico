@@ -2,10 +2,8 @@ import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Building2,
-  CheckCircle2,
   Clock,
   Loader2,
-  Phone,
   Plus,
   Search,
   User,
@@ -24,9 +22,9 @@ import { fetchDoctors, type DoctorRecord } from "../api/doctors";
 import { getErrorMessage, toDateInputValue, toDateTimePayload, toTimeInputValue } from "../lib/format";
 
 const statusConfig: Record<AppointmentStatus, { label: string; bg: string; text: string }> = {
-  pendiente: { label: "En espera", bg: "bg-amber-100", text: "text-amber-700" },
-  confirmada: { label: "Registrado", bg: "bg-blue-100", text: "text-blue-700" },
-  en_curso: { label: "Llamado", bg: "bg-purple-100", text: "text-purple-700" },
+  pendiente: { label: "Por llegar", bg: "bg-amber-100", text: "text-amber-700" },
+  confirmada: { label: "Llegó · Enfermería", bg: "bg-blue-100", text: "text-blue-700" },
+  en_curso: { label: "En consulta", bg: "bg-purple-100", text: "text-purple-700" },
   completada: { label: "Atendido", bg: "bg-green-100", text: "text-green-700" },
   cancelada: { label: "Cancelada", bg: "bg-slate-100", text: "text-slate-500" },
 };
@@ -151,7 +149,7 @@ export default function Recepcion() {
         id_medico: Number(newVisit.id_medico),
         fecha_hora,
         motivo: newVisit.motivo || null,
-        estado: "pendiente",
+        registrar_llegada: true,
       });
       setAppointments((prev) => [...prev, created]);
       setShowRegister(false);
@@ -338,23 +336,13 @@ export default function Recepcion() {
                                 Check-in
                               </button>
                             )}
+                            {/* Tras el check-in el paciente pasa a la evaluación de Enfermería;
+                                el médico lo llama desde la cola médica cuando su prioridad está validada. */}
                             {a.estado === "confirmada" && (
-                              <button
-                                onClick={() => handleStatusChange(a, "en_curso")}
-                                disabled={isUpdating}
-                                className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 flex items-center gap-1 disabled:opacity-60"
-                              >
-                                <Phone className="w-3 h-3" /> Llamar
-                              </button>
+                              <span className="text-xs text-blue-700">Enviado a evaluación de Enfermería</span>
                             )}
                             {a.estado === "en_curso" && (
-                              <button
-                                onClick={() => handleStatusChange(a, "completada")}
-                                disabled={isUpdating}
-                                className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center gap-1 disabled:opacity-60"
-                              >
-                                <CheckCircle2 className="w-3 h-3" /> Atendido
-                              </button>
+                              <span className="text-xs text-purple-700">Atendiéndose en consulta</span>
                             )}
                           </div>
                         </Can>

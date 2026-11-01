@@ -52,6 +52,7 @@ app.use(helmet());
 app.use(cors({ origin: ALLOWED_ORIGINS, methods: ["GET", "POST", "PUT", "PATCH", "DELETE"] }));
 app.use("/api", apiLimiter);
 app.use("/api/documentos", express.json({ limit: "7mb" }));
+app.use("/api/indicadores/linea-base/lotes", express.json({ limit: "2mb" }));
 app.use(express.json({ limit: "100kb" }));
 
 // Esperar a que el schema esté listo antes de servir requests
@@ -111,6 +112,7 @@ app.use("/api/cargos", cargosRoutes);
 app.use("/api/pagos", pagosRoutes);
 app.use("/api/analisis", analisisRoutes);
 app.use("/api/triajes", triajesRoutes);
+app.use("/api/indicadores", require("./modules/indicadores/indicadores.routes"));
 app.use("/api/atenciones-rapidas", require("./modules/atenciones/atenciones.routes"));
 app.use("/api/backups", backupsRoutes);
 app.use("/api/auditoria", auditoriaRoutes);

@@ -156,15 +156,21 @@ async function getAll(query) {
 async function create(body) {
   const client = await pool.connect();
   try {
+    await client.query("BEGIN");
     let visita = sanitize(body);
+    if (visita.id_cita) {
+      const locked = await client.query("SELECT estado FROM citas WHERE id_cita=$1 FOR UPDATE", [visita.id_cita]);
+      if (locked.rows[0] && locked.rows[0].estado !== "cancelada") {
+        const validated = await client.query("SELECT id_triaje FROM triajes WHERE id_cita=$1 AND estado_prioridad='validado'", [visita.id_cita]);
+        if (locked.rows[0].estado !== "en_curso" || !validated.rows.length) throw Object.assign(new Error("La consulta requiere prioridad validada e inicio desde la cola médica."), { status: 409 });
+      }
+    }
     const resolved = await resolvePayload(visita, client);
 
     if (resolved._notFound) throw Object.assign(new Error("Cita no encontrada."), { status: 404 });
     if (resolved._cancelled) throw Object.assign(new Error("No se puede convertir en visita una cita cancelada."), { status: 400 });
     visita = resolved;
     validateResolved(visita);
-
-    await client.query("BEGIN");
 
     const result = await client.query(
       `INSERT INTO visitas_medicas (

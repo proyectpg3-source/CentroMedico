@@ -39,7 +39,8 @@ router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req,
       const details = errors.map(error => error.replace(/\b(id_paciente|id_medico|fecha_hora|estado|triaje_notas)\b/g, field => labels[field]));
       return res.status(400).json({ message: details.join(' '), details });
     }
-    const created = await svc.create(sanitizedData);
+    if (req.body.registrar_llegada !== undefined && typeof req.body.registrar_llegada !== "boolean") return res.status(400).json({ message: "Registrar llegada debe ser verdadero o falso." });
+    const created = await svc.create({ ...sanitizedData, registrar_llegada: req.body.registrar_llegada });
     await logAuditEvent({
       usuario: req.usuario,
       accion: "cita.creada",

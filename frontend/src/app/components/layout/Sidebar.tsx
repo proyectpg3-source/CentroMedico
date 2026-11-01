@@ -55,8 +55,9 @@ export const navigation: NavGroup[] = [
       { to: "/patients", icon: Users, label: "Pacientes" },
       { to: "/recepcion", icon: ClipboardCheck, label: "Recepción" },
       { to: "/appointments", icon: CalendarDays, label: "Citas médicas" },
-      { to: "/triage", icon: ClipboardPlus, label: "Triaje" },
-      { to: "/prioritization", icon: ClipboardCheck, label: "Priorización" },
+      { to: "/cola-espera", icon: Stethoscope, label: "Cola médica" },
+      { to: "/triage", icon: ClipboardPlus, label: "Evaluación de Enfermería" },
+      { to: "/prioritization", icon: ClipboardCheck, label: "Validación profesional" },
       { to: "/doctors", icon: Stethoscope, label: "Doctores" },
       { to: "/records", icon: FileText, label: "Expedientes" },
       { to: "/documentos", icon: FolderOpen, label: "Documentos" },
@@ -82,6 +83,7 @@ export const navigation: NavGroup[] = [
   {
     label: "Administración",
     items: [
+      { to: "/indicadores", icon: BarChart3, label: "Indicadores" },
       { to: "/reports", icon: BarChart3, label: "Reportes" },
       { to: "/settings", icon: Settings, label: "Configuración" },
       { to: "/notificaciones", icon: Mail, label: "Correos" },

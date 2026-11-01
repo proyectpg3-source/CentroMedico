@@ -500,6 +500,148 @@ SCHEMA_STATEMENTS.push(`CREATE TABLE IF NOT EXISTS notificaciones_correo (
 );`);
 SCHEMA_STATEMENTS.push(`CREATE INDEX IF NOT EXISTS idx_notificaciones_correo_usuario ON notificaciones_correo(id_usuario,created_at DESC);`);
 
+SCHEMA_STATEMENTS.push(...[
+  // ---------------------------------------------------------------------------
+  // Flujo clínico: Recepción → Evaluación de Enfermería (SATS) → Motor P1–P4 →
+  // Validación profesional → Cola médica → Consulta.
+  // Portado de la versión v2 (migraciones 017, 018 y 019).
+  // ---------------------------------------------------------------------------
+
+  // Recepción: la llegada se registra en el check-in, no al crear la cita.
+  `ALTER TABLE citas ALTER COLUMN hora_llegada DROP NOT NULL;`,
+  `ALTER TABLE citas ALTER COLUMN hora_llegada DROP DEFAULT;`,
+
+  // Evaluación de Enfermería: registro SATS estructurado.
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS movilidad TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS estado_conciencia TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS trauma TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS glucometria NUMERIC(5,1);`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS edad_evaluacion INTEGER;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS revision_discriminadores JSONB;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS datos_no_obtenibles JSONB NOT NULL DEFAULT '{}'::jsonb;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS version_catalogo TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS revision_completa BOOLEAN NOT NULL DEFAULT FALSE;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS clasificacion_sats JSONB;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS id_usuario_registro INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS id_usuario_actualizacion INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL;`,
+
+  // Motor de priorización automática: propuesta fundamentada P1–P4.
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS propuesta JSONB;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS estado_propuesta TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS nivel_propuesto TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS nivel_maximo_posible TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS version_reglas TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS requiere_justificacion BOOLEAN NOT NULL DEFAULT FALSE;`,
+
+  // Validación profesional y cola médica.
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS prioridad_final TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS origen_clasificacion TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS motivo_confirmacion TEXT;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS id_usuario_validacion INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS fecha_validacion TIMESTAMPTZ;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS llamado_at TIMESTAMPTZ;`,
+  `ALTER TABLE triajes ADD COLUMN IF NOT EXISTS llamados INTEGER NOT NULL DEFAULT 0;`,
+  // Restricciones idempotentes: se crean una sola vez (NOT VALID no revisa
+  // filas antiguas). Si cambian, usar un nombre nuevo.
+  `DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_triajes_niveles') THEN
+  ALTER TABLE triajes ADD CONSTRAINT chk_triajes_niveles CHECK (
+    (nivel_propuesto IS NULL OR nivel_propuesto IN ('P1','P2','P3','P4'))
+    AND (nivel_maximo_posible IS NULL OR nivel_maximo_posible IN ('P1','P2','P3','P4'))
+    AND (prioridad_final IS NULL OR prioridad_final IN ('P1','P2','P3','P4'))
+    AND (estado_propuesta IS NULL OR estado_propuesta IN ('PROPUESTA_CONCLUSIVA','PROPUESTA_PROVISIONAL','SIN_PROPUESTA'))
+    AND (origen_clasificacion IS NULL OR origen_clasificacion IN ('AUTOMATICA','MANUAL'))
+    AND (movilidad IS NULL OR movilidad IN ('CAMINA','CON_AYUDA','CAMILLA_INMOVIL'))
+    AND (estado_conciencia IS NULL OR estado_conciencia IN ('ALERTA','CONFUSO','VOZ','DOLOR','NO_RESPONDE'))
+    AND (trauma IS NULL OR trauma IN ('SI','NO'))
+  ) NOT VALID;
+  END IF;
+  END $$;`,
+  // Una prioridad validada exige nivel final, responsable y, cuando
+  // corresponde, justificación escrita.
+  `DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_triajes_validacion') THEN
+  ALTER TABLE triajes ADD CONSTRAINT chk_triajes_validacion CHECK (
+    estado_prioridad <> 'validado'
+    OR (
+      prioridad_final IS NOT NULL
+      AND origen_clasificacion IS NOT NULL
+      AND fecha_validacion IS NOT NULL
+      AND id_usuario_validacion IS NOT NULL
+      AND (
+        (origen_clasificacion = 'AUTOMATICA' AND requiere_justificacion = FALSE AND prioridad_final = nivel_propuesto)
+        OR LENGTH(TRIM(COALESCE(motivo_confirmacion, ''))) >= 10
+      )
+    )
+  ) NOT VALID;
+  END IF;
+  END $$;`,
+  `CREATE INDEX IF NOT EXISTS idx_triajes_cola ON triajes(estado_prioridad, prioridad_final, fecha_validacion);`,
+
+  // Bitácora de evaluación, validación y cola.
+  `CREATE TABLE IF NOT EXISTS triajes_historial (
+    id_historial SERIAL PRIMARY KEY,
+    id_triaje INTEGER NOT NULL REFERENCES triajes(id_triaje) ON DELETE CASCADE,
+    id_usuario INTEGER REFERENCES usuarios(id_usuario) ON DELETE SET NULL,
+    accion TEXT NOT NULL CHECK (accion IN ('REGISTRO','ACTUALIZACION','VALIDACION','LLAMADO','INICIO_ATENCION')),
+    datos JSONB NOT NULL DEFAULT '{}'::jsonb,
+    registrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_triajes_historial ON triajes_historial(id_triaje, id_historial DESC);`,
+
+  // Aprobación médica de cada versión del conjunto de reglas P1–P4.
+  `CREATE TABLE IF NOT EXISTS aprobacion_reglas_prioridad (
+    id_aprobacion SERIAL PRIMARY KEY,
+    version_reglas TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('APROBADA','OBSERVADA')),
+    observaciones TEXT,
+    casos_validados INTEGER NOT NULL CHECK (casos_validados >= 0),
+    casos_correctos INTEGER NOT NULL CHECK (casos_correctos >= 0),
+    id_usuario INTEGER NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    registrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (casos_correctos <= casos_validados),
+    CHECK (decision <> 'OBSERVADA' OR LENGTH(TRIM(COALESCE(observaciones,''))) >= 10)
+  );`,
+
+  // Indicadores de optimización: línea base del periodo anterior al sistema.
+  // No guarda datos personales: solo un código de hoja, horas y prioridad.
+  `CREATE TABLE IF NOT EXISTS linea_base_lote (
+    id_lote SERIAL PRIMARY KEY,
+    nombre TEXT NOT NULL CHECK (LENGTH(TRIM(nombre)) >= 3),
+    descripcion TEXT,
+    origen TEXT NOT NULL CHECK (origen IN ('IMPORTACION','CAPTURA')),
+    total_registros INTEGER NOT NULL CHECK (total_registros > 0),
+    id_usuario INTEGER NOT NULL REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    registrado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    anulado BOOLEAN NOT NULL DEFAULT FALSE,
+    id_usuario_anulacion INTEGER REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    motivo_anulacion TEXT,
+    fecha_anulacion TIMESTAMPTZ,
+    CHECK (
+      (anulado = FALSE AND id_usuario_anulacion IS NULL AND motivo_anulacion IS NULL AND fecha_anulacion IS NULL)
+      OR (anulado = TRUE AND id_usuario_anulacion IS NOT NULL AND LENGTH(TRIM(COALESCE(motivo_anulacion,''))) >= 5 AND fecha_anulacion IS NOT NULL)
+    )
+  );`,
+  `CREATE TABLE IF NOT EXISTS linea_base_observacion (
+    id_observacion SERIAL PRIMARY KEY,
+    id_lote INTEGER NOT NULL REFERENCES linea_base_lote(id_lote) ON DELETE RESTRICT,
+    fila_origen INTEGER NOT NULL CHECK (fila_origen > 0),
+    codigo_hoja TEXT,
+    fecha_llegada TIMESTAMP NOT NULL,
+    fecha_valoracion TIMESTAMP,
+    fecha_inicio_consulta TIMESTAMP,
+    fecha_fin_consulta TIMESTAMP,
+    prioridad TEXT CHECK (prioridad IS NULL OR prioridad IN ('P1','P2','P3','P4')),
+    observacion TEXT,
+    CHECK (fecha_valoracion IS NULL OR fecha_valoracion >= fecha_llegada),
+    CHECK (fecha_inicio_consulta IS NULL OR fecha_inicio_consulta >= fecha_llegada),
+    CHECK (fecha_inicio_consulta IS NULL OR fecha_valoracion IS NULL OR fecha_inicio_consulta >= fecha_valoracion),
+    CHECK (fecha_fin_consulta IS NULL OR (fecha_inicio_consulta IS NOT NULL AND fecha_fin_consulta >= fecha_inicio_consulta)),
+    UNIQUE (id_lote, fila_origen)
+  );`,
+  `CREATE INDEX IF NOT EXISTS idx_linea_base_llegada ON linea_base_observacion(fecha_llegada);`,
+]);
+
 async function ensureSchema(pool) {
   const client = await pool.connect();
 
