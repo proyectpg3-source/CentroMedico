@@ -4,7 +4,12 @@ const {
   parsePagination, buildPaginatedResponse,
 } = require("../../utils/validators");
 const { CITA_SELECT } = require("../../utils/queries");
-const { calcularPrioridadParaPaciente } = require("../analisis/analisis.service");
+
+const PENDING_PRIORITY = Object.freeze({
+  prioridad_clinica: "baja",
+  puntaje_prioridad: 0,
+  motivos_prioridad: "Pendiente de evaluación de Enfermería y validación profesional.",
+});
 
 const ALLOWED_STATES = new Set(["pendiente", "confirmada", "en_curso", "completada", "cancelada"]);
 
@@ -93,7 +98,9 @@ async function getById(id) {
 async function create(body) {
   const c = sanitize(body);
   validateBeforeWrite(c);
-  const prioridad = await calcularPrioridadParaPaciente(c.id_paciente, c);
+  // La prioridad P1–P4 se define en la evaluación de Enfermería y se valida
+  // después; al crear la cita no se infiere ninguna prioridad del motivo.
+  const prioridad = PENDING_PRIORITY;
   const result = await pool.query(
     `INSERT INTO citas (
        id_paciente, id_medico, fecha_hora, motivo, estado, triaje_notas,
@@ -122,7 +129,6 @@ async function update(id, body) {
 
   const c = sanitize({ ...current.rows[0], ...body });
   validateBeforeWrite(c);
-  const prioridad = await calcularPrioridadParaPaciente(c.id_paciente, c);
   await pool.query(
     `UPDATE citas
      SET id_paciente=$1,
@@ -131,10 +137,11 @@ async function update(id, body) {
          motivo=$4,
          estado=$5,
          triaje_notas=$6,
-         prioridad_clinica=$7,
-         puntaje_prioridad=$8,
-         motivos_prioridad=$9
-     WHERE id_cita=$10`,
+         recordatorio_enviado_at=CASE
+           WHEN fecha_hora IS DISTINCT FROM $3::timestamptz THEN NULL
+           ELSE recordatorio_enviado_at
+         END
+     WHERE id_cita=$7`,
     [
       c.id_paciente,
       c.id_medico,
@@ -142,9 +149,6 @@ async function update(id, body) {
       c.motivo,
       c.estado || "pendiente",
       c.triaje_notas,
-      prioridad.prioridad_clinica,
-      prioridad.puntaje_prioridad,
-      prioridad.motivos_prioridad,
       id,
     ]
   );
@@ -164,7 +168,7 @@ async function updateStatus(id, estado) {
     `UPDATE citas
      SET estado=$2,
          hora_llegada=CASE
-           WHEN $2 IN ('en_curso', 'completada') THEN COALESCE(hora_llegada, NOW())
+           WHEN $2 IN ('confirmada', 'en_curso', 'completada') THEN COALESCE(hora_llegada, NOW())
            ELSE hora_llegada
          END,
          hora_inicio_atencion=CASE

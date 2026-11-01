@@ -36,6 +36,12 @@ export interface PriorityQueueRecord {
   medico_especialidad: string | null;
   visitas_previas: number;
   ultima_visita: string | null;
+  // Flujo SATS / P1–P4
+  id_triaje?: number | null;
+  nivel_propuesto?: "P1" | "P2" | "P3" | "P4" | null;
+  prioridad_final?: "P1" | "P2" | "P3" | "P4" | null;
+  estado_propuesta?: string | null;
+  estado_prioridad?: "propuesto" | "validado" | null;
 }
 
 export interface AnalysisIndicators {

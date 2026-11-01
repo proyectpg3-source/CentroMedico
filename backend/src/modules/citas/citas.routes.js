@@ -3,12 +3,16 @@ const { requireAuth, requireRole } = require("../../middlewares/auth.middleware"
 const { parseEntityId, sendInvalidId, handleDatabaseError, validateSATS } = require("../../utils/validators");
 const { logAuditEvent } = require("../../services/audit");
 const svc = require("./citas.service");
+const { notifyCita, wasRescheduled } = require("../correos/citasCorreo");
 
 const SATS_RULES_CITA = {
   id_paciente: { required: true, type: 'id' },
   id_medico: { required: true, type: 'id' },
-  fecha: { required: true, type: 'date' },
+  // El frontend envía fecha_hora; antes la regla pedía "fecha" y la creación
+  // de citas desde Recepción fallaba con "El campo fecha es obligatorio".
+  fecha_hora: { required: true, type: 'date' },
   motivo: { required: false, type: 'string' },
+  triaje_notas: { required: false, type: 'string' },
 };
 
 const router = express.Router();
@@ -31,7 +35,9 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req, res) => {
   try {
-    const { valid, sanitizedData, errors } = validateSATS(req.body, SATS_RULES_CITA);
+    const body = req.body || {};
+    const input = body.fecha_hora === undefined && body.fecha !== undefined ? { ...body, fecha_hora: body.fecha } : body;
+    const { valid, sanitizedData, errors } = validateSATS(input, SATS_RULES_CITA);
     if (!valid) {
       return res.status(400).json({ message: "Error de validación SATS", details: errors });
     }
@@ -44,6 +50,8 @@ router.post("/", requireRole("admin", "recepcionista", "enfermero"), async (req,
       descripcion: `Programo la cita #${created.id_cita}.`,
     });
     res.status(201).json(created);
+    // Confirmacion por correo en segundo plano: no retrasa ni rompe la respuesta.
+    notifyCita(created, "confirmacion");
   } catch (error) { handleDatabaseError(error, res, "Error al crear la cita."); }
 });
 
@@ -51,6 +59,7 @@ router.put("/:id", requireRole("admin", "recepcionista", "enfermero"), async (re
   try {
     const id = parseEntityId(req.params.id);
     if (!id) return sendInvalidId(res, "cita");
+    const before = await svc.getById(id);
     const updated = await svc.update(id, req.body);
     if (!updated) return res.status(404).json({ message: "Cita no encontrada." });
     await logAuditEvent({
@@ -61,6 +70,7 @@ router.put("/:id", requireRole("admin", "recepcionista", "enfermero"), async (re
       descripcion: `Actualizo la cita #${id}.`,
     });
     res.json(updated);
+    if (wasRescheduled(before, updated)) notifyCita(updated, "reprogramacion");
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
     handleDatabaseError(error, res, "Error al actualizar la cita.");

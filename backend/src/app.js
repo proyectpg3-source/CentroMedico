@@ -85,8 +85,12 @@ app.get("/", (req, res) => {
       "/api/analisis/priorizacion",
       "/api/analisis/indicadores",
       "/api/triajes",
+      "/api/triajes/cola",
+      "/api/triajes/reglas",
+      "/api/indicadores",
       "/api/backups/export",
       "/api/auditoria",
+      "/api/correos/estado",
     ],
   });
 });
@@ -120,9 +124,11 @@ app.use("/api/cargos", cargosRoutes);
 app.use("/api/pagos", pagosRoutes);
 app.use("/api/analisis", analisisRoutes);
 app.use("/api/triajes", triajesRoutes);
+app.use("/api/indicadores", require("./modules/indicadores/indicadores.routes"));
 app.use("/api/atenciones-rapidas", require("./modules/atenciones/atenciones.routes"));
 app.use("/api/backups", backupsRoutes);
 app.use("/api/auditoria", auditoriaRoutes);
+app.use("/api/correos", require("./modules/correos/correos.routes"));
 app.use("/api/auth", authRoutes);
 app.use("/api/productos", require("./modules/productos/productos.routes"));
 app.use("/api/documentos", require("./modules/documentos/documentos.routes"));

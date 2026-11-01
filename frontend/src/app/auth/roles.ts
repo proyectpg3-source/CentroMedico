@@ -29,6 +29,7 @@ export const MODULE_ACCESS: Record<string, UserRole[]> = {
   "/appointments": ALL_ROLES,
   "/recepcion": ["admin", "recepcionista", "enfermero"],
   "/triage": ["admin", "medico", "enfermero"],
+  "/cola-espera": ["admin", "medico", "enfermero"],
   "/doctors": ["admin", "medico", "enfermero", "fundacion"],
   "/records": ["admin", "medico", "enfermero"],
   "/documentos": ["admin", "medico", "enfermero"],
@@ -42,6 +43,7 @@ export const MODULE_ACCESS: Record<string, UserRole[]> = {
   "/prioritization": ["admin", "medico", "enfermero"],
   "/prediccion-ia": ["admin", "medico", "fundacion"],
   "/reports": ["admin", "medico", "fundacion"],
+  "/indicadores": ["admin", "medico", "fundacion"],
   "/settings": ["admin"],
 };
 

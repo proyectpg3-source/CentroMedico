@@ -14,6 +14,7 @@ import {
   TriangleAlert,
   Printer
 } from "lucide-react";
+import { useNavigate, useParams } from "react-router";
 import { Header } from "../components/layout/Header";
 import { request } from "../api/client";
 import { formatDateTime } from "../lib/format";
@@ -34,7 +35,11 @@ interface ClinicalHistory {
   };
 }
 
-export default function MedicalConsultation({ appointmentId }: { appointmentId: string }) {
+export default function MedicalConsultation({ appointmentId: appointmentIdProp }: { appointmentId?: string } = {}) {
+  // La ruta /consulta/:appointmentId no pasa props: el id viene de la URL.
+  const params = useParams();
+  const navigate = useNavigate();
+  const appointmentId = appointmentIdProp ?? params.appointmentId ?? "";
   const [history, setHistory] = useState<ClinicalHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [visitForm, setVisitForm] = useState({
@@ -75,7 +80,8 @@ export default function MedicalConsultation({ appointmentId }: { appointmentId: 
           fecha_visita: new Date().toISOString(),
         })
       });
-      alert("Consulta guardada exitosamente");
+      alert("Consulta guardada y finalizada.");
+      navigate("/cola-espera");
     } catch (error) {
       alert("Error al guardar la consulta");
     } finally {

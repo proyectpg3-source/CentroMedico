@@ -11,13 +11,16 @@
     "auth:create-admin": "node scripts/create-admin.js",
     "test": "node scripts/test-isolated.js",
     "test:clinical": "node scripts/test-clinical-flow.js",
+    "test:flujo": "node scripts/test-flujo-pglite.js",
     "test:security": "node scripts/test-security.js",
     "test:settings": "node scripts/test-settings.js",
     "test:visit-conversion": "node scripts/test-visit-conversion.js",
     "secret:generate": "node scripts/generate-secret.js",
     "test:db": "node scripts/test-payments-concurrency.js",
     "test:postgres-isolated": "node scripts/test-postgres-isolated.js",
-    "test:auth-hardening": "node scripts/test-auth-hardening.js"
+    "test:auth-hardening": "node scripts/test-auth-hardening.js",
+    "test:email": "node scripts/test-email.js",
+    "email:token": "node scripts/gmail-token.js"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +36,9 @@
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.15.2",
     "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.17"
   },
   "engines": {
     "node": ">=20"
