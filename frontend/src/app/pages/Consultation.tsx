@@ -62,14 +62,13 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
         ]);
         setHistory({ ...fullHistory, currentTriage });
       } } catch (error) {
-  const mensaje =
+  setError(
     error instanceof Error
       ? error.message
-      : "No se pudo guardar la consulta. Intenta nuevamente.";
-
-  alert(mensaje);
+      : "No se pudo cargar la información del paciente."
+  );
 } finally {
-  setSaving(false);
+  setLoading(false);
 }
     }
     loadPatientData();
@@ -94,8 +93,12 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
       alert("Consulta guardada y finalizada.");
       navigate("/cola-espera");
     } catch (error) {
-      setError(getErrorMessage(error, "No se pudo guardar la consulta."));
-    } finally {
+      setError(
+        error instanceof Error
+        ? error.message
+        : "No se pudo guardar la consulta.Intenta nuevamente."
+    );
+        } finally {
       setSaving(false);
     }
   }
