@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   User,
   AlertCircle,
@@ -49,6 +49,7 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
     costo_consulta: "",
   });
   const [saving, setSaving] = useState(false);
+  const saveInProgress = useRef(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -74,34 +75,50 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
     loadPatientData();
   }, [appointmentId]);
 
-  async function handleSaveVisit() {
-    if (!visitForm.costo_consulta.trim() || !Number.isFinite(Number(visitForm.costo_consulta)) || Number(visitForm.costo_consulta) < 0) {
-      setError("Indica el costo de consulta; usa 0 cuando la atención sea gratuita.");
-      return;
-    }
-    setSaving(true);
-    try {
-      await request("/api/visitas", {
-        method: "POST",
-        body: JSON.stringify({
-          id_cita: appointmentId,
-          ...visitForm,
-          costo_consulta: Number(visitForm.costo_consulta),
-          fecha_visita: new Date().toISOString(),
-        })
-      });
-      alert("Consulta guardada y finalizada.");
-      navigate("/cola-espera");
-    } catch (error) {
-      setError(
-        error instanceof Error
-        ? error.message
-        : "No se pudo guardar la consulta.Intenta nuevamente."
+ async function handleSaveVisit() {
+  if (saveInProgress.current) return;
+
+  const costo = Number(visitForm.costo_consulta);
+
+  if (
+    !visitForm.costo_consulta.trim() ||
+    !Number.isFinite(costo) ||
+    costo < 0
+  ) {
+    setError(
+      "Indica el costo de consulta; usa 0 cuando la atención sea gratuita."
     );
-        } finally {
-      setSaving(false);
-    }
+    return;
   }
+
+  saveInProgress.current = true;
+  setSaving(true);
+  setError("");
+
+  try {
+    await request("/api/visitas", {
+      method: "POST",
+      body: JSON.stringify({
+        id_cita: appointmentId,
+        ...visitForm,
+        costo_consulta: costo,
+        fecha_visita: new Date().toISOString(),
+      }),
+    });
+
+    alert("Consulta guardada y finalizada.");
+    navigate("/cola-espera");
+  } catch (error) {
+    setError(
+      error instanceof Error
+        ? error.message
+        : "No se pudo guardar la consulta. Intenta nuevamente."
+    );
+  } finally {
+    saveInProgress.current = false;
+    setSaving(false);
+  }
+}
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center">
@@ -254,12 +271,14 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
                 </div>
                 <div className="mt-8 flex justify-end gap-3">
                   <button
+                    type="button"
+                    
                     onClick={handleSaveVisit}
                     disabled={saving || !visitForm.diagnostico.trim() || !visitForm.costo_consulta.trim()}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md"
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Finalizar y Guardar Consulta
+                    {saving ? "Guardando…" : "Finalizar y Guardar Consulta"}         
                   </button>
                 </div>
               </div>
