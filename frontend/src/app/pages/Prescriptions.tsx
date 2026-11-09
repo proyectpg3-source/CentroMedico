@@ -566,12 +566,94 @@ function PrescriptionFormModal({
                   <Syringe className="h-4 w-4" />
                   Registrada el {formatDateTime(prescription.created_at)}
                 </div>
+                  <button
+  type="button"
+  onClick={() => setSelectedPrescription(prescription)}
+  className="mt-4 rounded-xl border border-blue-200 px-4 py-2 text-sm text-blue-700 hover:bg-blue-50"
+>
+  Ver receta
+</button>       
               </article>
             ))}
           </div>
         )}
       </div>
+{selectedPrescription && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+  >
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="prescription-preview-title"
+      className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2
+          id="prescription-preview-title"
+          className="text-xl font-semibold"
+        >
+          Vista previa de prescripción
+        </h2>
 
+        <button
+          type="button"
+          onClick={() => setSelectedPrescription(null)}
+          className="rounded-lg border px-3 py-2"
+          autoFocus
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <div className="mt-6 space-y-3 text-sm">
+        <p>
+          <strong>Paciente:</strong>{" "}
+          {selectedPrescription.paciente_nombre || "No registrado"}
+        </p>
+        <p>
+          <strong>Identificación:</strong>{" "}
+          {selectedPrescription.paciente_dni || "No registrada"}
+        </p>
+        <p>
+          <strong>Médico:</strong>{" "}
+          {selectedPrescription.medico_nombre || "No registrado"}
+        </p>
+        <p>
+          <strong>Especialidad:</strong>{" "}
+          {selectedPrescription.medico_especialidad || "No registrada"}
+        </p>
+        <p>
+          <strong>Registrada el:</strong>{" "}
+          {formatDateTime(selectedPrescription.created_at)}
+        </p>
+
+        <hr />
+
+        <p>
+          <strong>Medicamento:</strong>{" "}
+          {selectedPrescription.medicamento}
+        </p>
+        <p>
+          <strong>Dosis:</strong> {selectedPrescription.dosis}
+        </p>
+        <p>
+          <strong>Frecuencia:</strong> {selectedPrescription.frecuencia}
+        </p>
+        <p>
+          <strong>Duración:</strong> {selectedPrescription.duracion}
+        </p>
+        <p className="whitespace-pre-wrap">
+          <strong>Instrucciones:</strong>{" "}
+          {selectedPrescription.instrucciones ||
+            "Sin instrucciones adicionales registradas."}
+        </p>
+      </div>
+    </section>
+  </div>
+)}
+    
+      
       {showCreateModal && (
         <PrescriptionFormModal
           visits={visits}
