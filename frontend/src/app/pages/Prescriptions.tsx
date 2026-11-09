@@ -605,19 +605,17 @@ function PrescriptionFormModal({
       background: white !important;
     }
 
-    #prescription-print {
-      width: 100% !important;
-      max-width: none !important;
-      max-height: none !important;
-      overflow: visible !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: none !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      color: black !important;
-      background: white !important;
-    }
+  #prescription-print {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  translate: none !important;
+  animation: none !important;
+  transition: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
 
     #prescription-print button {
       display: none !important;
@@ -642,9 +640,15 @@ function PrescriptionFormModal({
     <div className="flex gap-2 print:hidden">
       <button
         type="button"
-        onClick={() => window.print()}
-        className="rounded-lg bg-blue-600 px-3 py-2 text-white"
-      >
+     onClick={() => {
+  const documento = document.getElementById("prescription-print");
+
+  if (documento) {
+    documento.scrollTop = 0;
+  }
+
+  requestAnimationFrame(() => window.print());
+}}      >
         Imprimir
       </button>
 
