@@ -62,7 +62,7 @@ export default function MedicalConsultation({ appointmentId: appointmentIdProp }
           request<any>(`/api/triajes/cita/${appointmentId}`),
         ]);
         setHistory({ ...fullHistory, currentTriage });
-      } } catch (error) {
+      }  catch (error) {
   setError(
     error instanceof Error
       ? error.message
