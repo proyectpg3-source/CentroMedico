@@ -579,10 +579,8 @@ function PrescriptionFormModal({
         )}
       </div>
 {selectedPrescription && (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-  >
-    <style>{`
+  <div className="prescription-preview-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+  <style>{`
   @media print {
     body * {
       visibility: hidden !important;
@@ -620,37 +618,40 @@ function PrescriptionFormModal({
     }
   }
 `}</style>
-    <section
-      id= "Prescription-print"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="prescription-preview-title"
-      className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+   <section
+  id="prescription-print"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="prescription-preview-title"
+  className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+>
+  <div className="flex items-center justify-between gap-4">
+    <h2
+      id="prescription-preview-title"
+      className="text-xl font-semibold"
     >
-      <div className="flex items-center justify-between gap-4">
-        <h2
-          id="prescription-preview-title"
-          className="text-xl font-semibold"
-        >
-          Vista previa de prescripción
-        </h2>
+      Vista previa de prescripción
+    </h2>
 
-         <button
-    type="button"
-    onClick={() => window.print()}
-    className="rounded-lg bg-blue-600 px-3 py-2 text-white"
-  >
-    Imprimir
-  </button>
-        <button
-          type="button"
-          onClick={() => setSelectedPrescription(null)}
-          className="rounded-lg border px-3 py-2"
-          autoFocus
-        >
-          Cerrar
-        </button>
-      </div>
+    <div className="flex gap-2 print:hidden">
+      <button
+        type="button"
+        onClick={() => window.print()}
+        className="rounded-lg bg-blue-600 px-3 py-2 text-white"
+      >
+        Imprimir
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setSelectedPrescription(null)}
+        className="rounded-lg border px-3 py-2"
+        autoFocus
+      >
+        Cerrar
+      </button>
+    </div>
+  </div>
 
       <div className="mt-6 space-y-3 text-sm">
         <p>
