@@ -582,7 +582,46 @@ function PrescriptionFormModal({
   <div
     className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
   >
+    <style>{`
+  @media print {
+    body * {
+      visibility: hidden !important;
+    }
+
+    #prescription-print,
+    #prescription-print * {
+      visibility: visible !important;
+    }
+
+    .prescription-preview-overlay {
+      position: absolute !important;
+      inset: 0 !important;
+      display: block !important;
+      padding: 0 !important;
+      background: white !important;
+    }
+
+    #prescription-print {
+      width: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      overflow: visible !important;
+      margin: 0 !important;
+      padding: 20px !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      color: black !important;
+      background: white !important;
+    }
+
+    #prescription-print .print\\:hidden {
+      display: none !important;
+    }
+  }
+`}</style>
     <section
+      id= "Prescription-print"
       role="dialog"
       aria-modal="true"
       aria-labelledby="prescription-preview-title"
@@ -596,6 +635,13 @@ function PrescriptionFormModal({
           Vista previa de prescripción
         </h2>
 
+         <button
+    type="button"
+    onClick={() => window.print()}
+    className="rounded-lg bg-blue-600 px-3 py-2 text-white"
+  >
+    Imprimir
+  </button>
         <button
           type="button"
           onClick={() => setSelectedPrescription(null)}
