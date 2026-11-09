@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/layout/Header";
 import { Can } from "../auth/usePermissions";
@@ -578,22 +579,27 @@ function PrescriptionFormModal({
           </div>
         )}
       </div>
-{selectedPrescription && (
+{selectedPrescription && createPortal(
   <div className="prescription-preview-overlay fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-  <style>{`
+<style>{`
   @media print {
-    body * {
-      visibility: hidden !important;
+    @page {
+      margin: 15mm;
     }
 
-    #prescription-print,
-    #prescription-print * {
-      visibility: visible !important;
+    body > :not(.prescription-preview-overlay) {
+      display: none !important;
+    }
+
+    html,
+    body {
+      height: auto !important;
+      overflow: visible !important;
+      background: white !important;
     }
 
     .prescription-preview-overlay {
-      position: absolute !important;
-      inset: 0 !important;
+      position: static !important;
       display: block !important;
       padding: 0 !important;
       background: white !important;
@@ -605,7 +611,7 @@ function PrescriptionFormModal({
       max-height: none !important;
       overflow: visible !important;
       margin: 0 !important;
-      padding: 20px !important;
+      padding: 0 !important;
       border: none !important;
       border-radius: 0 !important;
       box-shadow: none !important;
@@ -613,7 +619,7 @@ function PrescriptionFormModal({
       background: white !important;
     }
 
-    #prescription-print .print\\:hidden {
+    #prescription-print button {
       display: none !important;
     }
   }
@@ -697,7 +703,8 @@ function PrescriptionFormModal({
         </p>
       </div>
     </section>
-  </div>
+  </div>,
+  document.body
 )}
     
       
