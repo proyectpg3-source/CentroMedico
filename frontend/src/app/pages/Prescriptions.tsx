@@ -274,7 +274,9 @@ function PrescriptionFormModal({
   );
 }
 
-export default function Prescriptions() {
+  export default function Prescriptions() {
+  const [selectedPrescription, setSelectedPrescription] =
+    useState<PrescriptionRecord | null>(null);
   const [prescriptions, setPrescriptions] = useState<PrescriptionRecord[]>([]);
   const [visits, setVisits] = useState<VisitRecord[]>([]);
   const [products, setProducts] = useState<PharmacyProduct[]>([]);
